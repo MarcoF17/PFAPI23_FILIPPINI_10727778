@@ -14,6 +14,7 @@ typedef struct ServiceStation{
     struct Car* carList;
     struct ServiceStation* nextStation;
     struct ServiceStation* prevStation;
+    char stopNumber;
 }ServiceStation;
 
 typedef struct ServiceStation* SSPointer;
@@ -124,6 +125,7 @@ void create_station(int distance, int carsNumber){
     tmp = malloc(sizeof(ServiceStation));
     tmp->distance = distance;
     tmp->carList = NULL;
+    tmp->stopNumber = -1;
     station_inorder_insert(tmp);
 
     if(carsNumber > 0){
@@ -242,9 +244,7 @@ char* convert_int_to_char(int toBeConverted){
 
 ///plans a route (if it exists) between start and finish stations (start < finish)
 void plan_route_forwards(int start, int finish){
-    SSPointer startingStation, arrivingStation, currentStation;
-    startingStation = search_for_station(start);
-    arrivingStation = search_for_station(finish);
+    const SSPointer startingStation = search_for_station(start), arrivingStation = search_for_station(finish);
 
     //if there are no cars at the station
     if(startingStation->carList == NULL){
@@ -259,63 +259,36 @@ void plan_route_forwards(int start, int finish){
     }
 
     //at least one stop is required
-    int maxDistanceReachable, selectedBattery = startingStation->carList->battery;
-    SSPointer selectedStation = currentStation = startingStation, maxTmpReachable = startingStation, nextSelectedStation = startingStation;
+    SSPointer nextPossibleStop = startingStation->nextStation, previousStop = startingStation, maxReachableStation = NULL;  //nextPossibleStop: all possible next-stop starting from previousStop; previousStop: starting station for the new iteration fo the algorithm; maximumReachableStation: maximum reachable station from previousStop (not necessary equal to maxReachableDistance)
     char result[] = "";
+    int maxReachableDistance = 0, minimumCurrentStop = 1, maxBattery = 0;   //maxReachableDistance: maximum reachable distance from previousStop; minimumCurrentStop: minimum stop to try to reach destination
+
     strcat(result, convert_int_to_char(start));
-    int done = 0;
+    while(1){
+        if(previousStop->carList !=NULL){
+            maxReachableDistance = previousStop->distance + previousStop->carList->battery;
 
-    while(done == 0){
-        if(selectedStation->carList != NULL)
-            maxDistanceReachable = selectedStation->distance + selectedStation->carList->battery;
-        //printf("11111111111\n");
-        //selectedStation = nextSelectedStation;
-        //currentStation = maxTmpReachable->nextStation;
-        if(currentStation == NULL)
-            done = 2;
+            while(nextPossibleStop->distance <= maxReachableDistance){   //slides through the cars in the window (starting from previousStop->nextStation)
+                if(nextPossibleStop->carList != NULL) {  //if there are no cars at the currentStation, it needs to be skipped
+                    if (nextPossibleStop->carList->battery + nextPossibleStop->distance >= finish) {
+                        //route found
+                        return;
+                    }
 
-        else{
-            //selectedBattery = currentStation->carList->battery;
-            while(currentStation->distance - selectedStation->distance <= selectedStation->carList->battery  && done == 0){
-                done = 3;
-                printf("222222222\n");
-                if(currentStation->carList != NULL) {
-                    if (finish - currentStation->distance < currentStation->carList->battery) {
-                        strcat(result, convert_int_to_char(selectedStation->distance));
-                        strcat(result, "\n");
-                        done = 1;
+                    if(nextPossibleStop->carList->battery > maxBattery)
+                        maxBattery = nextPossibleStop->carList->battery;
+                }
+
+                maxReachableStation = nextPossibleStop;
+
+                if(nextPossibleStop->nextStation != NULL)
+                    if(nextPossibleStop->nextStation->distance > maxReachableDistance)
                         break;
-                    }
 
-                    if (currentStation->carList->battery + currentStation->distance > maxDistanceReachable) {
-                        //maxDistanceReachable = currentStation->carList->battery + currentStation->distance;
-                        nextSelectedStation = currentStation;
-                        strcat(result, convert_int_to_char(selectedStation->distance));
-                        strcat(result, " ");
-                    }
-                }
-
-                currentStation = currentStation->nextStation;
-                //if(currentStation != NULL)
-                    maxTmpReachable = currentStation;
-                if(currentStation == NULL || currentStation == arrivingStation){
-                    done = 2;
-                    break;
-                }
+                //eliminazione di tutte le stazioni precedenti a maxBattery
             }
-
-            selectedStation = nextSelectedStation;
-            currentStation = maxTmpReachable;
-            maxDistanceReachable = selectedStation->distance;
-            /*if(selectedStation->carList != NULL)
-                maxDistanceReachable = selectedStation->distance + selectedStation->carList->battery;*/
         }
     }
-
-    if(done == 2 || done == 3)
-        printf("nessun percorso\n");
-    else
-        printf("%s", result);
 }
 
 ///plans a route (if it exists) between start and finish stations (start > finish)
