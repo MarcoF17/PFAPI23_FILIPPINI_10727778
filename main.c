@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define POINTER_VECTOR_DIM 100
 
@@ -35,27 +36,27 @@ void station_inorder_insert(SSPointer newStation){
         return;
     }
 
-    SSPointer actualStation = pointerVector[0];
-    while(newStation->distance > actualStation->distance){
-        if(newStation->distance == actualStation->distance){
+    SSPointer currentStation = pointerVector[0];
+    while(newStation->distance > currentStation->distance){
+        if(newStation->distance == currentStation->distance){
             printf("non aggiunta\n");
             free(newStation);
             return;
         }
-        actualStation = actualStation->nextStation;
-        if(actualStation == NULL)
+        currentStation = currentStation->nextStation;
+        if(currentStation == NULL)
             break;
     }
 
-    if(actualStation != NULL){
-        newStation->nextStation = actualStation->nextStation;
+    if(currentStation != NULL){
+        newStation->nextStation = currentStation->nextStation;
         if(newStation->nextStation == NULL)
             pointerVector[POINTER_VECTOR_DIM-1] = newStation;
         else
             newStation->nextStation->prevStation = newStation;
 
-        actualStation->nextStation = newStation;
-        newStation->prevStation = actualStation;
+        currentStation->nextStation = newStation;
+        newStation->prevStation = currentStation;
         if(newStation->prevStation == NULL)
             pointerVector[0] = newStation;
     }
@@ -65,48 +66,46 @@ void station_inorder_insert(SSPointer newStation){
         newStation->prevStation->nextStation = newStation;
         pointerVector[POINTER_VECTOR_DIM-1] = newStation;
     }
-
-    //printf("aggiunta\n");
 }
 
-///returns the reference to the station with
+///returns the reference to the station with the given distance
 SSPointer search_for_station(int distance){
-    SSPointer actualStation = pointerVector[0];
+    SSPointer currentStation = pointerVector[0];
 
-    while(actualStation != NULL){
-        if(actualStation->distance == distance)
-            return actualStation;
-        actualStation = actualStation->nextStation;
+    while(currentStation != NULL){
+        if(currentStation->distance == distance)
+            return currentStation;
+        currentStation = currentStation->nextStation;
     }
 
     return NULL;
 }
 
 ///in-order insertion of a new car in a station
-int create_insert_inorder_car(SSPointer station, int battery) {
+int car_create_inorder_insert(SSPointer station, int battery) {
     if(station == NULL)
         return 0;       //0 stands for "non aggiunta"
 
     Car *newCar = malloc(sizeof(Car));
     newCar->battery = battery;
     newCar->nextCar = NULL;
-    Car *actualCar = station->carList;
-    Car *actualCarPrev = NULL;
+    Car *currentCar = station->carList;
+    Car *currentCarPrev = NULL;
 
-    if(actualCar == NULL)
+    if(currentCar == NULL)
         station->carList = newCar;
 
     else {
-        while (newCar->battery < actualCar->battery) {
-            actualCarPrev = actualCar;
-            actualCar = actualCar->nextCar;
-            if(actualCar == NULL)
+        while (newCar->battery < currentCar->battery) {
+            currentCarPrev = currentCar;
+            currentCar = currentCar->nextCar;
+            if(currentCar == NULL)
                 break;
         }
 
-        newCar->nextCar = actualCar;
-        if(actualCarPrev != NULL)
-            actualCarPrev->nextCar = newCar;
+        newCar->nextCar = currentCar;
+        if(currentCarPrev != NULL)
+            currentCarPrev->nextCar = newCar;
         else
             station->carList = newCar;
     }
@@ -132,7 +131,7 @@ void create_station(int distance, int carsNumber){
         int i, battery;
         for(i = 0; i < carsNumber; i++){
             scanfTmp = scanf("%d", &battery);
-            create_insert_inorder_car(tmp, battery);
+            car_create_inorder_insert(tmp, battery);
         }
     }
 
@@ -153,11 +152,11 @@ void demolish_station(int distance){
     if(pointer->nextStation != NULL)
         pointer->nextStation->prevStation = pointer->prevStation;
 
-    Car *actualCar = pointer->carList, *nextCar;
-    while(actualCar != NULL){
-        nextCar = actualCar->nextCar;
-        free(actualCar);
-        actualCar = nextCar;
+    Car *currentCar = pointer->carList, *nextCar;
+    while(currentCar != NULL){
+        nextCar = currentCar->nextCar;
+        free(currentCar);
+        currentCar = nextCar;
     }
 
     printf("demolita\n");
@@ -167,7 +166,7 @@ void demolish_station(int distance){
     }
 }
 
-///scraps the car with the given battery capacity (if it exists)
+///scraps the car with the given battery capacity at the given station (if it exists)
 void scrap_car(int distance, int battery){
     SSPointer pointer = search_for_station(distance);
     if(pointer == NULL){
@@ -175,30 +174,176 @@ void scrap_car(int distance, int battery){
         return;
     }
 
-    Car *actualCar = pointer->carList, *prevCar = NULL;
-    while(actualCar != NULL){
-        if(actualCar->battery == battery){
+    Car *currentCar = pointer->carList, *prevCar = NULL;
+    while(currentCar != NULL){
+        if(currentCar->battery == battery){
             if(prevCar != NULL)
-                prevCar->nextCar = actualCar->nextCar;
+                prevCar->nextCar = currentCar->nextCar;
             else
-                pointer->carList = actualCar->nextCar;
+                pointer->carList = currentCar->nextCar;
 
-            free(actualCar);
+            free(currentCar);
             printf("rottamata\n");
             return;
         }
-        actualCar = actualCar->nextCar;
+        currentCar = currentCar->nextCar;
     }
 
     printf("non rottamata\n");
 }
 
+char* convert_int_to_char(int toBeConverted){
+    char res[] = "";
+    while(toBeConverted > 0){
+        int remainder = toBeConverted % 10;
+        toBeConverted /= 10;
+        switch (remainder) {
+            case 0:
+                strcat(res, "0");
+                break;
+            case 1:
+                strcat(res, "1");
+                break;
+            case 2:
+                strcat(res, "2");
+                break;
+            case 3:
+                strcat(res, "3");
+                break;
+            case 4:
+                strcat(res, "4");
+                break;
+            case 5:
+                strcat(res, "5");
+                break;
+            case 6:
+                strcat(res, "6");
+                break;
+            case 7:
+                strcat(res, "7");
+                break;
+            case 8:
+                strcat(res, "8");
+                break;
+            case 9:
+                strcat(res, "9");
+                break;
+        }
+    }
+
+    char finalResult[] = "";
+    int i;
+    for(i = 0; i < strlen(res); i++){
+        finalResult[i] = res[strlen(res) - i -1];
+    }
+
+    return finalResult;
+}
+
+///plans a route (if it exists) between start and finish stations (start < finish)
+void plan_route_forwards(int start, int finish){
+    SSPointer startingStation, arrivingStation, currentStation;
+    startingStation = search_for_station(start);
+    arrivingStation = search_for_station(finish);
+
+    //if there are no cars at the station
+    if(startingStation->carList == NULL){
+        printf("nessun percorso\n");
+        return;
+    }
+
+    //no stop during the trip (start -> finish)
+    if(finish - start <= startingStation->carList->battery){
+        printf("%d %d\n", start, finish);
+        return;
+    }
+
+    //at least one stop is required
+    int maxDistanceReachable, selectedBattery = startingStation->carList->battery;
+    SSPointer selectedStation = currentStation = startingStation, maxTmpReachable = startingStation, nextSelectedStation = startingStation;
+    char result[] = "";
+    strcat(result, convert_int_to_char(start));
+    int done = 0;
+
+    while(done == 0){
+        if(selectedStation->carList != NULL)
+            maxDistanceReachable = selectedStation->distance + selectedStation->carList->battery;
+        //printf("11111111111\n");
+        //selectedStation = nextSelectedStation;
+        //currentStation = maxTmpReachable->nextStation;
+        if(currentStation == NULL)
+            done = 2;
+
+        else{
+            //selectedBattery = currentStation->carList->battery;
+            while(currentStation->distance - selectedStation->distance <= selectedStation->carList->battery  && done == 0){
+                done = 3;
+                printf("222222222\n");
+                if(currentStation->carList != NULL) {
+                    if (finish - currentStation->distance < currentStation->carList->battery) {
+                        strcat(result, convert_int_to_char(selectedStation->distance));
+                        strcat(result, "\n");
+                        done = 1;
+                        break;
+                    }
+
+                    if (currentStation->carList->battery + currentStation->distance > maxDistanceReachable) {
+                        //maxDistanceReachable = currentStation->carList->battery + currentStation->distance;
+                        nextSelectedStation = currentStation;
+                        strcat(result, convert_int_to_char(selectedStation->distance));
+                        strcat(result, " ");
+                    }
+                }
+
+                currentStation = currentStation->nextStation;
+                //if(currentStation != NULL)
+                    maxTmpReachable = currentStation;
+                if(currentStation == NULL || currentStation == arrivingStation){
+                    done = 2;
+                    break;
+                }
+            }
+
+            selectedStation = nextSelectedStation;
+            currentStation = maxTmpReachable;
+            maxDistanceReachable = selectedStation->distance;
+            /*if(selectedStation->carList != NULL)
+                maxDistanceReachable = selectedStation->distance + selectedStation->carList->battery;*/
+        }
+    }
+
+    if(done == 2 || done == 3)
+        printf("nessun percorso\n");
+    else
+        printf("%s", result);
+}
+
+///plans a route (if it exists) between start and finish stations (start > finish)
+void plan_route_backwards(int start, int finish){
+    SSPointer startingStation, arrivingStation, currentStation;
+    startingStation = currentStation = search_for_station(start);
+    arrivingStation = search_for_station(finish);
+
+    //if there are no cars at the station
+    if(startingStation->carList == NULL){
+        printf("nessun percorso\n");
+        return;
+    }
+
+    //no stop during the trip (start -> finish)
+    if(start - finish <= search_for_station(start)->carList->battery){
+        printf("%d %d\n", start, finish);
+        return;
+    }
+
+}
+
 ///just for debug
 void print_cars_batteries(SSPointer station){
-    Car *actualCar = station->carList;
-    while(actualCar != NULL){
-        printf("%d\n", actualCar->battery);
-        actualCar = actualCar->nextCar;
+    Car *currentCar = station->carList;
+    while(currentCar != NULL){
+        printf("%d\n", currentCar->battery);
+        currentCar = currentCar->nextCar;
     }
 }
 
@@ -220,7 +365,7 @@ int main() {
                     scanfTmp = scanf("%c", &commandType);
                 int distance, battery;
                 scanfTmp = scanf("%d %d", &distance, &battery);
-                int res = create_insert_inorder_car(search_for_station(distance), battery);
+                int res = car_create_inorder_insert(search_for_station(distance), battery);
                 if(res == 0)
                     printf("non aggiunta\n");
                 else
@@ -256,7 +401,17 @@ int main() {
         }
 
         else if(commandType == 'p'){    //pianifica-percorso
+            while(commandType != ' '){
+                scanfTmp = scanf("%c", &commandType);
+            }
 
+            int s1, s2;
+            scanfTmp = scanf("%d %d", &s1, &s2);
+
+            if(s1 < s2)
+                plan_route_forwards(s1, s2);
+            else if(s1 > s2)
+                plan_route_backwards(s1, s2);
         }
     }
 }
