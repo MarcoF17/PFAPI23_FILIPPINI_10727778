@@ -193,7 +193,7 @@ void scrap_car(int distance, int battery){
 }
 
 char *convert_int_to_char(int toBeConverted){
-    char res[] = "";
+    char *res = malloc(10);
     int counter = 0;
     while(toBeConverted > 0){
         counter++;
@@ -233,7 +233,7 @@ char *convert_int_to_char(int toBeConverted){
         }
     }
 
-    char *finalResult = (char*) malloc(strlen(res));
+    char *finalResult = (char*) malloc(counter+1);
     int i;
     printf("%s\n", res);
     printf("len %d\n", counter);
@@ -242,6 +242,7 @@ char *convert_int_to_char(int toBeConverted){
         finalResult[i] = res[counter - i -1];
     }
 
+    //printf("%s\n", finalResult);
     return finalResult;
 }
 
@@ -262,7 +263,7 @@ void plan_route_forwards(int start, int finish){
     }
 
     //at least one stop is required
-    char tmpRes[] = "";
+    char *tmpRes = malloc((finish-start)* sizeof(char));
     const SSPointer arrivingStation = search_for_station(finish);
     SSPointer currentArrivingStation = arrivingStation, selectedStationForNextIteration = arrivingStation->prevStation, currentStationDuringIteration = arrivingStation->prevStation;
     int done = 0, check = 0;
@@ -299,7 +300,7 @@ void plan_route_forwards(int start, int finish){
         else if(!check)
             break;
         else{
-            char *stationToAdd = NULL;
+            char *stationToAdd = malloc(100);
             stationToAdd = convert_int_to_char(currentArrivingStation->distance);
             strcat(tmpRes, stationToAdd);
         }
