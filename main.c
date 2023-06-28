@@ -14,7 +14,6 @@ typedef struct ServiceStation{
     struct Car* carList;
     struct ServiceStation* nextStation;
     struct ServiceStation* prevStation;
-    char stopNumber;
 }ServiceStation;
 
 typedef struct ServiceStation* SSPointer;
@@ -50,14 +49,14 @@ void station_inorder_insert(SSPointer newStation){
     }
 
     if(currentStation != NULL){
-        newStation->nextStation = currentStation->nextStation;
+        newStation->nextStation = currentStation;
+        newStation->prevStation = currentStation->prevStation;
+
         if(newStation->nextStation == NULL)
             pointerVector[POINTER_VECTOR_DIM-1] = newStation;
         else
             newStation->nextStation->prevStation = newStation;
 
-        currentStation->nextStation = newStation;
-        newStation->prevStation = currentStation;
         if(newStation->prevStation == NULL)
             pointerVector[0] = newStation;
     }
@@ -125,7 +124,6 @@ void create_station(int distance, int carsNumber){
     tmp = malloc(sizeof(ServiceStation));
     tmp->distance = distance;
     tmp->carList = NULL;
-    tmp->stopNumber = -1;
     station_inorder_insert(tmp);
 
     if(carsNumber > 0){
@@ -196,7 +194,9 @@ void scrap_car(int distance, int battery){
 
 char *convert_int_to_char(int toBeConverted){
     char res[] = "";
+    int counter = 0;
     while(toBeConverted > 0){
+        counter++;
         int remainder = toBeConverted % 10;
         toBeConverted /= 10;
         switch (remainder) {
@@ -235,8 +235,11 @@ char *convert_int_to_char(int toBeConverted){
 
     char *finalResult = (char*) malloc(strlen(res));
     int i;
-    for(i = 0; i < strlen(res); i++){
-        finalResult[i] = res[strlen(res) - i -1];
+    printf("%s\n", res);
+    printf("len %d\n", counter);
+    for(i = 0; i < counter; i++){
+        printf("\t%c\t", res[counter - i - 1]);
+        finalResult[i] = res[counter - i -1];
     }
 
     return finalResult;
@@ -244,7 +247,7 @@ char *convert_int_to_char(int toBeConverted){
 
 ///plans a route (if it exists) between start and finish stations (start < finish)
 void plan_route_forwards(int start, int finish){
-    const SSPointer startingStation = search_for_station(start), arrivingStation = search_for_station(finish);
+    const SSPointer startingStation = search_for_station(start);
 
     //if there are no cars at the station
     if(startingStation->carList == NULL){
@@ -259,62 +262,78 @@ void plan_route_forwards(int start, int finish){
     }
 
     //at least one stop is required
-    SSPointer nextPossibleStop = startingStation->nextStation, previousStop = startingStation, maxReachableStation = NULL, maxBatteryStation = NULL;  //nextPossibleStop: all possible next-stop starting from previousStop; previousStop: starting station for the new iteration fo the algorithm; maximumReachableStation: maximum reachable station from previousStop (not necessary equal to maxReachableDistance)
-    char result[] = "";
-    int maxReachableDistance = 0, minimumCurrentStop = 1, maxBattery = 0, canGoOutsideWindow;   //maxReachableDistance: maximum reachable distance from previousStop; minimumCurrentStop: minimum stop to try to reach destination
-
-    strcat(result, convert_int_to_char(start));
+    char tmpRes[] = "";
+    const SSPointer arrivingStation = search_for_station(finish);
+    SSPointer currentArrivingStation = arrivingStation, selectedStationForNextIteration = arrivingStation->prevStation, currentStationDuringIteration = arrivingStation->prevStation;
+    int done = 0, check = 0;
     while(1){
-        if(previousStop->carList !=NULL){
-            maxReachableDistance = previousStop->distance + previousStop->carList->battery;
-
-            canGoOutsideWindow = 0;
-            while(nextPossibleStop->distance <= maxReachableDistance){   //slides through the cars in the window (starting from previousStop->nextStation)
-                if(nextPossibleStop->carList == NULL)
-                    nextPossibleStop->stopNumber = 0;
-
-                else {  //if there are no cars at the currentStation, it needs to be skipped
-                    if (nextPossibleStop->carList->battery + nextPossibleStop->distance >= finish) {
-                        //this is actually the next and final stop before arriving station
-                        return;
-                    }
-
-                    if(nextPossibleStop->distance + nextPossibleStop->carList->battery > maxReachableStation->distance)
-                        canGoOutsideWindow = 1;
-
-                    if(nextPossibleStop->carList->battery > maxBattery){
-                        maxBattery = nextPossibleStop->carList->battery;
-                        maxBatteryStation = nextPossibleStop;
-                    }
-                }
-
-                maxReachableStation = nextPossibleStop;
-
-                if(nextPossibleStop->nextStation != NULL)
-                    if(nextPossibleStop->nextStation->distance > maxReachableDistance)
-                        break;
-
-            }
-
-            if(canGoOutsideWindow == 0){
-                printf("nessun percorso\n");
-                return;
-            }
-
-            SSPointer tmpStation = previousStop->nextStation;
-            if(tmpStation != NULL) {
-                while (1) {
-                    if (tmpStation->carList != NULL) {
-                        if (tmpStation == maxBatteryStation)
-                            break;
-                        if (tmpStation->carList->battery < maxBattery)
-                            tmpStation->stopNumber = 0;
-                    }
-                    tmpStation = tmpStation->nextStation;
+        while(1){
+            //printf("IIIIIIIIIIIIII\n");
+            //check = 0;
+            if(currentStationDuringIteration->carList == NULL)
+                continue;
+            else{
+                if(currentStationDuringIteration->carList->battery + currentStationDuringIteration->distance >= currentArrivingStation->distance){
+                    selectedStationForNextIteration = currentStationDuringIteration;
+                    check = 1;
                 }
             }
+
+            if(currentStationDuringIteration == startingStation)
+                break;
+
+            currentStationDuringIteration = currentStationDuringIteration->prevStation;
+            if(currentStationDuringIteration == NULL)
+                break;
+        }
+
+        currentArrivingStation = selectedStationForNextIteration;
+        currentStationDuringIteration = selectedStationForNextIteration->prevStation;
+        if(selectedStationForNextIteration->distance < startingStation->distance){
+            break;
+        }
+        else if(selectedStationForNextIteration == startingStation && check){
+            done = 1;
+            break;
+        }
+        else if(!check)
+            break;
+        else{
+            char *stationToAdd = NULL;
+            stationToAdd = convert_int_to_char(currentArrivingStation->distance);
+            strcat(tmpRes, stationToAdd);
         }
     }
+
+    if(done == 0)
+        printf("nessun percorso\n");
+    else{
+        //inversione e stampa del percorso
+        char* finalResult;
+        finalResult = convert_int_to_char(start);
+        char buff[] = "";
+        int i = strlen(tmpRes) - 1;
+        while(i >= 0){
+            while(1){
+                if(tmpRes[i] == ' '){
+                    i--;
+                    break;
+                }
+                strcat(buff, &tmpRes[i]);
+                i--;
+            }
+            strcat(finalResult, " ");
+            char buffToInvert[strlen(buff)];
+            int j;
+            for(j = 0; j < strlen(buff); j++){
+                buffToInvert[j] = buff[strlen(buff)-j-1];
+            }
+            strcat(finalResult, buffToInvert);
+        }
+        strcat(finalResult, convert_int_to_char(finish));
+        printf("%s\n", finalResult);
+    }
+    return;
 }
 
 ///plans a route (if it exists) between start and finish stations (start > finish)
