@@ -59,6 +59,8 @@ void station_inorder_insert(SSPointer newStation){
 
         if(newStation->prevStation == NULL)
             pointerVector[0] = newStation;
+        else
+            newStation->prevStation->nextStation = newStation;
     }
     else{
         newStation->prevStation = pointerVector[POINTER_VECTOR_DIM-1];
@@ -73,6 +75,7 @@ SSPointer search_for_station(int distance){
     SSPointer currentStation = pointerVector[0];
 
     while(currentStation != NULL){
+        //printf("distance: %d\n", currentStation->distance);
         if(currentStation->distance == distance)
             return currentStation;
         currentStation = currentStation->nextStation;
@@ -235,10 +238,10 @@ char *convert_int_to_char(int toBeConverted){
 
     char *finalResult = (char*) malloc(counter+1);
     int i;
-    printf("%s\n", res);
-    printf("len %d\n", counter);
+    //printf("%s\n", res);
+    //printf("len %d\n", counter);
     for(i = 0; i < counter; i++){
-        printf("\t%c\t", res[counter - i - 1]);
+        //printf("\t%c\t", res[counter - i - 1]);
         finalResult[i] = res[counter - i -1];
     }
 
@@ -263,10 +266,10 @@ void plan_route_forwards(int start, int finish){
     }
 
     //at least one stop is required
-    char *tmpRes = malloc((finish-start)* sizeof(char));
+    char *tmpRes = malloc(1);
     const SSPointer arrivingStation = search_for_station(finish);
     SSPointer currentArrivingStation = arrivingStation, selectedStationForNextIteration = arrivingStation->prevStation, currentStationDuringIteration = arrivingStation->prevStation;
-    int done = 0, check = 0;
+    int done = 0, check = 0, count = 0;
     while(1){
         while(1){
             //printf("IIIIIIIIIIIIII\n");
@@ -282,6 +285,7 @@ void plan_route_forwards(int start, int finish){
 
             if(currentStationDuringIteration == startingStation)
                 break;
+
 
             currentStationDuringIteration = currentStationDuringIteration->prevStation;
             if(currentStationDuringIteration == NULL)
@@ -300,9 +304,11 @@ void plan_route_forwards(int start, int finish){
         else if(!check)
             break;
         else{
-            char *stationToAdd = malloc(100);
+            char *stationToAdd = (char*)malloc(1);
             stationToAdd = convert_int_to_char(currentArrivingStation->distance);
             strcat(tmpRes, stationToAdd);
+            count += strlen(stationToAdd) + 1;
+            strcat(tmpRes, " ");
         }
     }
 
@@ -310,10 +316,15 @@ void plan_route_forwards(int start, int finish){
         printf("nessun percorso\n");
     else{
         //inversione e stampa del percorso
-        char* finalResult;
+        strcat(tmpRes, "\0");
+        printf("len %d\n", strlen(tmpRes));
+        char* finalResult = NULL;
         finalResult = convert_int_to_char(start);
         char buff[] = "";
-        int i = strlen(tmpRes) - 1;
+        printf("buff1 -%s-\n", buff);
+        int i = strlen(tmpRes) - 2;
+        printf("tmp -%s-\n", tmpRes);
+        printf("final -%s-\n", finalResult);
         while(i >= 0){
             while(1){
                 if(tmpRes[i] == ' '){
@@ -322,6 +333,7 @@ void plan_route_forwards(int start, int finish){
                 }
                 strcat(buff, &tmpRes[i]);
                 i--;
+                printf("buff -%s-\n", buff);
             }
             strcat(finalResult, " ");
             char buffToInvert[strlen(buff)];
@@ -329,12 +341,12 @@ void plan_route_forwards(int start, int finish){
             for(j = 0; j < strlen(buff); j++){
                 buffToInvert[j] = buff[strlen(buff)-j-1];
             }
+            printf("to invert -%s-\n", buffToInvert);
             strcat(finalResult, buffToInvert);
         }
         strcat(finalResult, convert_int_to_char(finish));
         printf("%s\n", finalResult);
     }
-    return;
 }
 
 ///plans a route (if it exists) between start and finish stations (start > finish)
@@ -398,7 +410,6 @@ int main() {
                 int distance, carsNumber;
                 scanfTmp = scanf("%d %d", &distance, &carsNumber);
                 create_station(distance, carsNumber);
-                //print_cars_batteries(search_for_station(distance));
             }
         }
 
