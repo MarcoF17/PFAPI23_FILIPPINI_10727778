@@ -194,7 +194,7 @@ void scrap_car(int distance, int battery){
     printf("non rottamata\n");
 }
 
-char* convert_int_to_char(int toBeConverted){
+char *convert_int_to_char(int toBeConverted){
     char res[] = "";
     while(toBeConverted > 0){
         int remainder = toBeConverted % 10;
@@ -233,7 +233,7 @@ char* convert_int_to_char(int toBeConverted){
         }
     }
 
-    char finalResult[] = "";
+    char *finalResult = (char*) malloc(strlen(res));
     int i;
     for(i = 0; i < strlen(res); i++){
         finalResult[i] = res[strlen(res) - i -1];
@@ -259,24 +259,33 @@ void plan_route_forwards(int start, int finish){
     }
 
     //at least one stop is required
-    SSPointer nextPossibleStop = startingStation->nextStation, previousStop = startingStation, maxReachableStation = NULL;  //nextPossibleStop: all possible next-stop starting from previousStop; previousStop: starting station for the new iteration fo the algorithm; maximumReachableStation: maximum reachable station from previousStop (not necessary equal to maxReachableDistance)
+    SSPointer nextPossibleStop = startingStation->nextStation, previousStop = startingStation, maxReachableStation = NULL, maxBatteryStation = NULL;  //nextPossibleStop: all possible next-stop starting from previousStop; previousStop: starting station for the new iteration fo the algorithm; maximumReachableStation: maximum reachable station from previousStop (not necessary equal to maxReachableDistance)
     char result[] = "";
-    int maxReachableDistance = 0, minimumCurrentStop = 1, maxBattery = 0;   //maxReachableDistance: maximum reachable distance from previousStop; minimumCurrentStop: minimum stop to try to reach destination
+    int maxReachableDistance = 0, minimumCurrentStop = 1, maxBattery = 0, canGoOutsideWindow;   //maxReachableDistance: maximum reachable distance from previousStop; minimumCurrentStop: minimum stop to try to reach destination
 
     strcat(result, convert_int_to_char(start));
     while(1){
         if(previousStop->carList !=NULL){
             maxReachableDistance = previousStop->distance + previousStop->carList->battery;
 
+            canGoOutsideWindow = 0;
             while(nextPossibleStop->distance <= maxReachableDistance){   //slides through the cars in the window (starting from previousStop->nextStation)
-                if(nextPossibleStop->carList != NULL) {  //if there are no cars at the currentStation, it needs to be skipped
+                if(nextPossibleStop->carList == NULL)
+                    nextPossibleStop->stopNumber = 0;
+
+                else {  //if there are no cars at the currentStation, it needs to be skipped
                     if (nextPossibleStop->carList->battery + nextPossibleStop->distance >= finish) {
-                        //route found
+                        //this is actually the next and final stop before arriving station
                         return;
                     }
 
-                    if(nextPossibleStop->carList->battery > maxBattery)
+                    if(nextPossibleStop->distance + nextPossibleStop->carList->battery > maxReachableStation->distance)
+                        canGoOutsideWindow = 1;
+
+                    if(nextPossibleStop->carList->battery > maxBattery){
                         maxBattery = nextPossibleStop->carList->battery;
+                        maxBatteryStation = nextPossibleStop;
+                    }
                 }
 
                 maxReachableStation = nextPossibleStop;
@@ -285,7 +294,24 @@ void plan_route_forwards(int start, int finish){
                     if(nextPossibleStop->nextStation->distance > maxReachableDistance)
                         break;
 
-                //eliminazione di tutte le stazioni precedenti a maxBattery
+            }
+
+            if(canGoOutsideWindow == 0){
+                printf("nessun percorso\n");
+                return;
+            }
+
+            SSPointer tmpStation = previousStop->nextStation;
+            if(tmpStation != NULL) {
+                while (1) {
+                    if (tmpStation->carList != NULL) {
+                        if (tmpStation == maxBatteryStation)
+                            break;
+                        if (tmpStation->carList->battery < maxBattery)
+                            tmpStation->stopNumber = 0;
+                    }
+                    tmpStation = tmpStation->nextStation;
+                }
             }
         }
     }
