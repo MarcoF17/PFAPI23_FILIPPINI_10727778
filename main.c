@@ -29,6 +29,7 @@ typedef struct StopDuringRoute* StopPointer;
 int scanfTmp = 0, stationNumber = 0;
 SSPointer pointerVector[POINTER_VECTOR_DIM];   //vector to optimize access to stations
 StopPointer finalStopPointer = NULL, initialStopPointer = NULL;
+int *resultVector = NULL, resultVectorDimension = 0;
 
 ///initialize pointer-vector to NULL
 void init_pointer_vector(SSPointer pv[]){
@@ -287,11 +288,11 @@ void print_route(int start, int finish){
 
 ///cleans-up the list with stop-stations after route is planned
 void stopList_cleanup(){
-    StopPointer prev = NULL, curr = initialStopPointer;
+    StopPointer prev, curr = initialStopPointer;
     while(curr != NULL){
         prev = curr;
         curr = curr->nextStop;
-        free(curr);
+        free(prev);
     }
 
     initialStopPointer = finalStopPointer = NULL;
@@ -316,7 +317,7 @@ void plan_route_forwards(int start, int finish){
     //at least one stop is required
     const SSPointer arrivingStation = search_for_station(finish);
     SSPointer currentArrivingStation = arrivingStation, selectedStationForNextIteration = arrivingStation->prevStation, currentStationDuringIteration = arrivingStation->prevStation;
-    int done = 0, check = 0, count = 0;
+    int done = 0, check = 0;
     while(1){
         check = 0;
         while(1){
@@ -343,7 +344,7 @@ void plan_route_forwards(int start, int finish){
         if(selectedStationForNextIteration->distance < startingStation->distance){
             break;
         }
-        else if(selectedStationForNextIteration == startingStation/* && check*/){
+        else if(selectedStationForNextIteration == startingStation && check){
             done = 1;
             break;
         }
@@ -363,25 +364,58 @@ void plan_route_forwards(int start, int finish){
 }
 
 ///plans a route (if it exists) between start and finish stations (start > finish)
-void plan_route_backwards(int start, int finish){
-    SSPointer startingStation, arrivingStation, currentStation;
-    startingStation = currentStation = search_for_station(start);
-    arrivingStation = search_for_station(finish);
+int plan_route_backwards(int start, int finish, int maxHop){    //0 means no route found, 1 means route found
+    SSPointer startingStation = search_for_station(start);
 
-    //if there are no cars at the station
-    if(startingStation->carList == NULL){
-        printf("nessun percorso\n");
-        return;
+    if(startingStation->carList == NULL)
+        return 0;
+    else{
+        if(maxHop == 0) {
+            if (start - startingStation->carList->battery <= finish){
+                resultVector = malloc(sizeof(int));
+                resultVector[resultVectorDimension] = finish;
+                resultVectorDimension++;
+                resultVector[resultVectorDimension] = startingStation->distance;
+                resultVectorDimension++;
+                return 1;
+            }
+            else
+                return 0;
+        }
+
+        else{
+            int minReachableDistance = start - startingStation->carList->battery;
+            //looking for minReachableStation
+            SSPointer minReachableStation = startingStation, arrivingStation = search_for_station(finish);
+            while(minReachableStation->prevStation->distance >= minReachableDistance) { //maybe if(minReachableStation->prevStation != NULL...
+                minReachableStation = minReachableStation->prevStation;
+                if(minReachableStation == arrivingStation){
+                    resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
+                    resultVector[resultVectorDimension] = start;
+                    resultVectorDimension++;
+                    return 1;
+                }
+            }
+            if(minReachableStation == startingStation)
+                return 2;
+
+            int res = plan_route_backwards(minReachableStation->distance, finish, maxHop-1);
+            if(res == 2)
+                return res;
+            else if(res == 1){
+                //adding stop station
+                if(resultVector == NULL)
+                    resultVector = malloc(sizeof(int));
+                else
+                    resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
+
+                resultVector[resultVectorDimension] = start;
+                resultVectorDimension++;
+                return 1;
+            }
+        }
     }
-
-    //no stop during the trip (start -> finish)
-    if(start - finish <= search_for_station(start)->carList->battery){
-        printf("%d %d\n", start, finish);
-        return;
-    }
-
-    //at least one stop is required
-
+    return 0;
 }
 
 ///just for debug
@@ -455,8 +489,31 @@ int main() {
 
             if(s1 < s2)
                 plan_route_forwards(s1, s2);
-            else if(s1 > s2)
-                plan_route_backwards(s1, s2);
+            else if(s1 > s2){
+                int returningValue = 0, i = 0;
+                while(returningValue == 0){
+                    returningValue = plan_route_backwards(s1, s2, i);
+                    if(returningValue == 0)
+                        i++;
+                    if(i == s1 - s2 - 2)
+                        break;
+                }
+                if(resultVector != NULL){
+                    int j;
+                    for(j = resultVectorDimension - 1; j >= 0; j--){
+                        printf("%d", resultVector[j]);
+                        if(j == 0)
+                            printf("\n");
+                        else
+                            printf(" ");
+                    }
+                }
+                else
+                    printf("nessun percorso\n");
+
+                free(resultVector);
+                resultVectorDimension = 0;
+            }
         }
     }
 }
