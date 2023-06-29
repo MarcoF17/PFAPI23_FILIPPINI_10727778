@@ -18,6 +18,13 @@ typedef struct ServiceStation{
 
 typedef struct ServiceStation* SSPointer;
 
+typedef struct StopDuringRoute{
+    int distance;
+    struct StopDuringRoute* prevStop;
+}StopDuringRoute;
+
+typedef struct StopDuringRoute* StopPointer;
+
 int scanfTmp = 0, stationNumber = 0;
 SSPointer pointerVector[POINTER_VECTOR_DIM];   //vector to optimize access to stations
 
@@ -316,36 +323,29 @@ void plan_route_forwards(int start, int finish){
         printf("nessun percorso\n");
     else{
         //inversione e stampa del percorso
-        strcat(tmpRes, "\0");
-        printf("len %d\n", strlen(tmpRes));
-        char* finalResult = NULL;
-        finalResult = convert_int_to_char(start);
-        char buff[] = "";
-        printf("buff1 -%s-\n", buff);
-        int i = strlen(tmpRes) - 2;
-        printf("tmp -%s-\n", tmpRes);
-        printf("final -%s-\n", finalResult);
-        while(i >= 0){
-            while(1){
-                if(tmpRes[i] == ' '){
-                    i--;
-                    break;
-                }
-                strcat(buff, &tmpRes[i]);
-                i--;
-                printf("buff -%s-\n", buff);
+        char tmpStringToMakeInversion[count], finalResult[] = "";
+        while(1){
+            if(*tmpRes == ' ' || *tmpRes == '\0')
+                break;
+            int j = 0;
+            while(tmpRes[j] != ' '){
+                tmpStringToMakeInversion[j] = tmpRes[j];
+                j++;
             }
-            strcat(finalResult, " ");
-            char buffToInvert[strlen(buff)];
-            int j;
-            for(j = 0; j < strlen(buff); j++){
-                buffToInvert[j] = buff[strlen(buff)-j-1];
-            }
-            printf("to invert -%s-\n", buffToInvert);
-            strcat(finalResult, buffToInvert);
+
+            int subLen = strlen(tmpStringToMakeInversion);
+            char* pos = strstr(tmpRes, tmpStringToMakeInversion);
+            memmove(pos, pos + subLen, strlen(pos + subLen) + 1);
+            strcat(finalResult, tmpStringToMakeInversion);
         }
-        strcat(finalResult, convert_int_to_char(finish));
-        printf("%s\n", finalResult);
+
+        char *tmp = NULL, *tmp2 = convert_int_to_char(start);
+        memcpy(tmp, tmp2, strlen(tmp2));
+        strcat(tmp, " ");
+        strcat(tmp, finalResult);
+        strcat(tmp, convert_int_to_char(finish));
+        printf("%s\n", tmp);
+
     }
 }
 
