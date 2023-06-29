@@ -21,12 +21,14 @@ typedef struct ServiceStation* SSPointer;
 typedef struct StopDuringRoute{
     int distance;
     struct StopDuringRoute* prevStop;
+    struct StopDuringRoute* nextStop;
 }StopDuringRoute;
 
 typedef struct StopDuringRoute* StopPointer;
 
 int scanfTmp = 0, stationNumber = 0;
 SSPointer pointerVector[POINTER_VECTOR_DIM];   //vector to optimize access to stations
+StopPointer finalStopPointer = NULL, initialStopPointer = NULL;
 
 ///initialize pointer-vector to NULL
 void init_pointer_vector(SSPointer pv[]){
@@ -82,7 +84,6 @@ SSPointer search_for_station(int distance){
     SSPointer currentStation = pointerVector[0];
 
     while(currentStation != NULL){
-        //printf("distance: %d\n", currentStation->distance);
         if(currentStation->distance == distance)
             return currentStation;
         currentStation = currentStation->nextStation;
@@ -245,15 +246,55 @@ char *convert_int_to_char(int toBeConverted){
 
     char *finalResult = (char*) malloc(counter+1);
     int i;
-    //printf("%s\n", res);
-    //printf("len %d\n", counter);
     for(i = 0; i < counter; i++){
-        //printf("\t%c\t", res[counter - i - 1]);
         finalResult[i] = res[counter - i -1];
     }
 
-    //printf("%s\n", finalResult);
     return finalResult;
+}
+
+///insertion of stop in a separate list
+void stop_insert(SSPointer station){
+    StopDuringRoute *newStop = malloc(sizeof(StopDuringRoute));
+    newStop->distance = station->distance;
+
+    if(finalStopPointer == NULL && initialStopPointer == NULL) {
+        finalStopPointer = initialStopPointer = newStop;
+        newStop->prevStop = newStop->nextStop = NULL;
+    }
+    else{
+        newStop->prevStop = NULL;
+        newStop->nextStop = initialStopPointer;
+        if(initialStopPointer->nextStop != NULL)
+            initialStopPointer->nextStop->prevStop = newStop;
+        initialStopPointer = newStop;
+    }
+}
+
+///prints the route planned
+void print_route(int start, int finish){
+    printf("%d ", start);
+    StopPointer currentIterationStop = initialStopPointer, prevStop = NULL;
+    while(currentIterationStop != NULL){
+        printf("%d ", currentIterationStop->distance);
+        prevStop = currentIterationStop;
+        currentIterationStop = currentIterationStop->nextStop;
+        free(prevStop);
+    }
+    printf("%d\n", finish);
+    initialStopPointer = finalStopPointer = NULL;
+}
+
+///cleans-up the list with stop-stations after route is planned
+void stopList_cleanup(){
+    StopPointer prev = NULL, curr = initialStopPointer;
+    while(curr != NULL){
+        prev = curr;
+        curr = curr->nextStop;
+        free(curr);
+    }
+
+    initialStopPointer = finalStopPointer = NULL;
 }
 
 ///plans a route (if it exists) between start and finish stations (start < finish)
@@ -273,14 +314,12 @@ void plan_route_forwards(int start, int finish){
     }
 
     //at least one stop is required
-    char *tmpRes = malloc(1);
     const SSPointer arrivingStation = search_for_station(finish);
     SSPointer currentArrivingStation = arrivingStation, selectedStationForNextIteration = arrivingStation->prevStation, currentStationDuringIteration = arrivingStation->prevStation;
     int done = 0, check = 0, count = 0;
     while(1){
+        check = 0;
         while(1){
-            //printf("IIIIIIIIIIIIII\n");
-            //check = 0;
             if(currentStationDuringIteration->carList == NULL)
                 continue;
             else{
@@ -304,49 +343,23 @@ void plan_route_forwards(int start, int finish){
         if(selectedStationForNextIteration->distance < startingStation->distance){
             break;
         }
-        else if(selectedStationForNextIteration == startingStation && check){
+        else if(selectedStationForNextIteration == startingStation/* && check*/){
             done = 1;
             break;
         }
         else if(!check)
             break;
         else{
-            char *stationToAdd = (char*)malloc(1);
-            stationToAdd = convert_int_to_char(currentArrivingStation->distance);
-            strcat(tmpRes, stationToAdd);
-            count += strlen(stationToAdd) + 1;
-            strcat(tmpRes, " ");
+            stop_insert(currentArrivingStation);
         }
     }
 
-    if(done == 0)
+    if(done == 0){
         printf("nessun percorso\n");
-    else{
-        //inversione e stampa del percorso
-        char tmpStringToMakeInversion[count], finalResult[] = "";
-        while(1){
-            if(*tmpRes == ' ' || *tmpRes == '\0')
-                break;
-            int j = 0;
-            while(tmpRes[j] != ' '){
-                tmpStringToMakeInversion[j] = tmpRes[j];
-                j++;
-            }
-
-            int subLen = strlen(tmpStringToMakeInversion);
-            char* pos = strstr(tmpRes, tmpStringToMakeInversion);
-            memmove(pos, pos + subLen, strlen(pos + subLen) + 1);
-            strcat(finalResult, tmpStringToMakeInversion);
-        }
-
-        char *tmp = NULL, *tmp2 = convert_int_to_char(start);
-        memcpy(tmp, tmp2, strlen(tmp2));
-        strcat(tmp, " ");
-        strcat(tmp, finalResult);
-        strcat(tmp, convert_int_to_char(finish));
-        printf("%s\n", tmp);
-
+        stopList_cleanup();
     }
+    else
+        print_route(start, finish);
 }
 
 ///plans a route (if it exists) between start and finish stations (start > finish)
@@ -366,6 +379,8 @@ void plan_route_backwards(int start, int finish){
         printf("%d %d\n", start, finish);
         return;
     }
+
+    //at least one stop is required
 
 }
 
