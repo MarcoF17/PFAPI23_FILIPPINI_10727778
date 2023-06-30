@@ -396,10 +396,16 @@ int plan_route_backwards(int start, int finish, int maxHop){    //0 means no rou
                     return 1;
                 }
             }
-            if(minReachableStation == startingStation)
-                return 2;
+            /*if(minReachableStation == startingStation)
+                return 2;*/
 
             int res = plan_route_backwards(minReachableStation->distance, finish, maxHop-1);
+            while(minReachableStation != startingStation){
+                if(minReachableStation != NULL){
+                    minReachableStation = minReachableStation->nextStation;
+                    res = plan_route_backwards(minReachableStation->distance, finish, maxHop);
+                }
+            }
             if(res == 2)
                 return res;
             else if(res == 1){
