@@ -364,63 +364,38 @@ void plan_route_forwards(int start, int finish){
 }
 
 ///plans a route (if it exists) between start and finish stations (start > finish)
-int plan_route_backwards(int start, int finish, int maxHop){    //0 means no route found, 1 means route found
+int plan_route_backwards(int start, int finish){    //0 means no route found, 1 means route found
+    //ci vuole un ciclo che contenga tutto probabilmente
     SSPointer startingStation = search_for_station(start);
 
     if(startingStation->carList == NULL)
         return 0;
     else{
-        if(maxHop == 0) {
-            if (start - startingStation->carList->battery <= finish){
-                resultVector = malloc(sizeof(int));
-                resultVector[resultVectorDimension] = finish;
-                resultVectorDimension++;
-                resultVector[resultVectorDimension] = startingStation->distance;
-                resultVectorDimension++;
-                return 1;
-            }
-            else
-                return 0;
+        //findind midStation (== minReachableStation of startingStation)
+        SSPointer midStation = startingStation, arrivingStation = search_for_station(finish);
+        int midReachableDistance = start - startingStation->carList->battery;
+        while(midStation->prevStation->distance >= midReachableDistance){
+            midStation = midStation->prevStation;
         }
 
-        else{
-            int minReachableDistance = start - startingStation->carList->battery;
-            //looking for minReachableStation
-            SSPointer minReachableStation = startingStation, arrivingStation = search_for_station(finish);
-            while(minReachableStation->prevStation->distance >= minReachableDistance) { //maybe if(minReachableStation->prevStation != NULL...
-                minReachableStation = minReachableStation->prevStation;
-                if(minReachableStation == arrivingStation){
-                    resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
-                    resultVector[resultVectorDimension] = start;
-                    resultVectorDimension++;
-                    return 1;
-                }
-            }
-            /*if(minReachableStation == startingStation)
-                return 2;*/
-
-            int res = plan_route_backwards(minReachableStation->distance, finish, maxHop-1);
-            while(minReachableStation != startingStation){
-                if(minReachableStation != NULL){
-                    minReachableStation = minReachableStation->nextStation;
-                    res = plan_route_backwards(minReachableStation->distance, finish, maxHop);
-                }
-            }
-            if(res == 2)
-                return res;
-            else if(res == 1){
-                //adding stop station
-                if(resultVector == NULL)
-                    resultVector = malloc(sizeof(int));
-                else
-                    resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
-
-                resultVector[resultVectorDimension] = start;
-                resultVectorDimension++;
-                return 1;
-            }
+        //finding minReachableStation
+        SSPointer minReachableStation = midStation;
+        while(midStation->carList == NULL){
+            midStation = midStation->nextStation;
         }
+        int minReachableDistance = midStation->distance - midStation->carList->battery;
+        while(minReachableStation->prevStation->distance >= minReachableDistance){
+            minReachableStation = minReachableStation->prevStation;
+        }
+
+        //here we have the maximum gap with one stop between start&finish
+        //here we need to implement the algorithm of max-min distances
     }
+
+
+
+
+
     return 0;
 }
 
@@ -496,14 +471,8 @@ int main() {
             if(s1 < s2)
                 plan_route_forwards(s1, s2);
             else if(s1 > s2){
-                int returningValue = 0, i = 0;
-                while(returningValue == 0){
-                    returningValue = plan_route_backwards(s1, s2, i);
-                    if(returningValue == 0)
-                        i++;
-                    if(i == s1 - s2 - 2)
-                        break;
-                }
+                    plan_route_backwards(s1, s2);
+
                 if(resultVector != NULL){
                     int j;
                     for(j = resultVectorDimension - 1; j >= 0; j--){
