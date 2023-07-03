@@ -198,6 +198,7 @@ void scrap_car(int distance, int battery){
             printf("rottamata\n");
             return;
         }
+        prevCar = currentCar;
         currentCar = currentCar->nextCar;
     }
 
@@ -373,11 +374,13 @@ SSPointer calculate_minReachableStation(SSPointer startingStation, int finish){ 
     SSPointer minReachableStation = startingStation;
     while(1){
         if(minReachableStation->distance >= minReachableDistanceFromStartingStation){
+            if(minReachableStation == pointerVector[0])
+                return pointerVector[0];
             if(minReachableStation->prevStation != NULL)
                 minReachableStation = minReachableStation->prevStation;
             else if(minReachableStation->distance == finish)
-                return minReachableStation;
-            else return minReachableStation;
+                return minReachableStation->nextStation;
+            //else return minReachableStation;
         }
         else break;
     }
@@ -421,31 +424,39 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
         resultVectorDimension++;
 
         //iteration on station between startingStation and minReachableStationFromStartingStation to select nextStopStation
-        SSPointer prevIterationStation = startingStation, currentIterationStation = startingStation->prevStation, possibleNextStopStation = minReachableStationFromStartingStation, nextMinReachableStation = NULL;
+        SSPointer currentIterationStation = startingStation->prevStation, possibleNextStopStation = minReachableStationFromStartingStation, nextMinReachableStation = NULL;
         int check;
         //assert currentIterrationStation != NULL
         while(1){
             check = 0;
             SSPointer minReachableStationFromMinReachableStation = calculate_minReachableStation(minReachableStationFromStartingStation, finish);
+            if(minReachableStationFromStartingStation->distance - minReachableStationFromStartingStation->carList->battery <= finish){
+                resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
+                resultVector[resultVectorDimension] = minReachableStationFromStartingStation->distance;
+                resultVectorDimension++;
+                check = 2;
+            }
 
-            while(currentIterationStation->distance >= minReachableStationFromStartingStation->distance){
+            while(currentIterationStation->distance >= minReachableStationFromStartingStation->distance/* && check == 0*/){
                 nextMinReachableStation = calculate_minReachableStation(currentIterationStation, finish);
+
+                //printf("current: %d; minReachableFromCurrent: %d\n", currentIterationStation->distance, nextMinReachableStation->distance);
+
                 currentIterationStation = currentIterationStation->prevStation;
 
-                /*if(nextMinReachableStation->distance == finish){
+                if(nextMinReachableStation->distance <= finish){
                     check = 2;
-                    resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
-                    resultVector[resultVectorDimension] = possibleNextStopStation->prevStation->distance;
-                    resultVectorDimension++;
-                    break;
+                    possibleNextStopStation = currentIterationStation;
                 }
-                else*/ if(currentIterationStation->distance <= finish){
+                else if(currentIterationStation->distance <= finish){
+                    //possibleNextStopStation = currentIterationStation->nextStation;
                     check = 2;
                     break;
                 }
-                else if(nextMinReachableStation->distance <= minReachableStationFromMinReachableStation->distance){
+                else if(nextMinReachableStation->distance <= minReachableStationFromMinReachableStation->distance/* || nextMinReachableStation->distance <= finish*/){
                     //possibleNextStopStation = nextMinReachableStation;
                     possibleNextStopStation = currentIterationStation->nextStation;
+                    minReachableStationFromMinReachableStation = nextMinReachableStation;
                     check = 1;
                     //printf("CIAO\n");
                 }
@@ -463,7 +474,10 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
                 //free(resultVector);
                 return;
             }
-            else if(check == 2){
+
+            //printf("----------------------------------------\n");
+
+            if(check == 2){
                 print_result_vector(finish);
                 return;
             }
@@ -473,11 +487,13 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
             resultVector[resultVectorDimension] = possibleNextStopStation->distance;
             resultVectorDimension++;
 
-            if(possibleNextStopStation->distance == finish)
+            if(possibleNextStopStation->distance <= finish){
+                print_result_vector(finish);
                 break;
+            }
 
-            prevIterationStation = possibleNextStopStation;
-            currentIterationStation = prevIterationStation->prevStation;
+            //prevIterationStation = possibleNextStopStation;
+            //currentIterationStation = prevIterationStation->prevStation;
             minReachableStationFromStartingStation = calculate_minReachableStation(possibleNextStopStation, finish);
             nextMinReachableStation = NULL;
 
