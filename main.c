@@ -161,8 +161,13 @@ void demolish_station(int distance){
 
     if(pointer->prevStation != NULL)
         pointer->prevStation->nextStation = pointer->nextStation;
+    else
+        pointerVector[0] = pointer->nextStation;
+
     if(pointer->nextStation != NULL)
         pointer->nextStation->prevStation = pointer->prevStation;
+    else
+        pointerVector[POINTER_VECTOR_DIM - 1] = pointer->prevStation;
 
     Car *currentCar = pointer->carList, *nextCar;
     while(currentCar != NULL){
@@ -439,6 +444,10 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
 
             while(currentIterationStation->distance >= minReachableStationFromStartingStation->distance/* && check == 0*/){
                 nextMinReachableStation = calculate_minReachableStation(currentIterationStation, finish);
+                if(nextMinReachableStation == currentIterationStation){
+                    check = 0;
+                    break;
+                }
 
                 //printf("current: %d; minReachableFromCurrent: %d\n", currentIterationStation->distance, nextMinReachableStation->distance);
 
@@ -495,6 +504,10 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
             //prevIterationStation = possibleNextStopStation;
             //currentIterationStation = prevIterationStation->prevStation;
             minReachableStationFromStartingStation = calculate_minReachableStation(possibleNextStopStation, finish);
+            if(minReachableStationFromStartingStation == possibleNextStopStation){
+                printf("nessun percorso\n");
+                return;
+            }
             nextMinReachableStation = NULL;
 
         }
