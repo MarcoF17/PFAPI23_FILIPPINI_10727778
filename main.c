@@ -402,6 +402,11 @@ void print_result_vector(int finish){
     printf("%d\n", finish);
 }
 
+///if the previous stop chosen is not the minimum one based on next stop
+void route_fixup(){
+
+}
+
 ///plans a route (if it exists) between start and finish stations (start > finish)
 void plan_route_backwards(int start, int finish){    //0 means no route found, 1 means route found
     //ci vuole un ciclo che contenga tutto probabilmente
@@ -446,7 +451,9 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
                 nextMinReachableStation = calculate_minReachableStation(currentIterationStation, finish);
                 if(nextMinReachableStation == currentIterationStation){
                     check = 0;
-                    break;
+                    currentIterationStation = currentIterationStation->prevStation;
+                    continue;
+                    //break;
                 }
 
                 //printf("current: %d; minReachableFromCurrent: %d\n", currentIterationStation->distance, nextMinReachableStation->distance);
