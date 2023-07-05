@@ -4,7 +4,7 @@ Problemi:
 test 49 -> risolto
 test 69 (non trova percorso) -> risolto
 test 84 (stesso problema di 49) -> risolto
-testo 100 (ho un salto in più)
+test 100 (ho un salto in più) -> risolto
 test 102 (stesso problema di 49) -> risolto
 test 103 (stesso problema di 49) !!
 test 104 (stesso problema di 49)
