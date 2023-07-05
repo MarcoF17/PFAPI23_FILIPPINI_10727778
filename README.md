@@ -1,12 +1,12 @@
 # PFAPI23_FILIPPINI_10727778
 
 Problemi:
-test 49
-test 69 (non trova percorso)
-test 84 (stesso problema di 49)
+test 49 -> risolto
+test 69 (non trova percorso) -> risolto
+test 84 (stesso problema di 49) -> risolto
 testo 100 (ho un salto in più)
-test 102 (stesso problema di 49)
-test 103 (stesso problema di 49)
+test 102 (stesso problema di 49) -> risolto
+test 103 (stesso problema di 49) !!
 test 104 (stesso problema di 49)
 test 105 (stesso problema di 49)
 test 196 (stesso problema di 49)

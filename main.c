@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define POINTER_VECTOR_DIM 100
+#define POINTER_VECTOR_DIM 2
 
 typedef struct Car{
     int battery;
@@ -409,7 +409,8 @@ void route_fixup(SSPointer prevPrevStop, SSPointer prevStop, SSPointer newStop) 
     if (minReachableStationFromPrevPrev == prevStop) {
         //all ok
         return;
-    } else {
+    }
+    else {
         SSPointer startingPoint = prevStop->prevStation, currentIterationPoint = startingPoint;
         while (1) {
             if (currentIterationPoint->carList != NULL) {
@@ -476,7 +477,7 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
             while(currentIterationStation->distance >= minReachableStationFromStartingStation->distance/* && check == 0*/){
                 nextMinReachableStation = calculate_minReachableStation(currentIterationStation, finish);
                 if(nextMinReachableStation == currentIterationStation){
-                    check = 0;
+                    //check = 0;
                     currentIterationStation = currentIterationStation->prevStation;
                     continue;
                     //break;
@@ -500,7 +501,6 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
                     possibleNextStopStation = currentIterationStation->nextStation;
                     minReachableStationFromMinReachableStation = nextMinReachableStation;
                     check = 1;
-                    //printf("CIAO\n");
                 }
 
                 //currentIterationStation = currentIterationStation->prevStation;
@@ -510,6 +510,16 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
                 }
 
             }
+
+            /*SSPointer minTmp = calculate_minReachableStation(possibleNextStopStation, finish);
+            while(minTmp == possibleNextStopStation){
+                possibleNextStopStation = possibleNextStopStation->nextStation;
+                if(possibleNextStopStation == prevIterationStation){
+                    check = 0;
+                    break;
+                }
+                check = 1;
+            }*/
 
             if(check == 0){
                 printf("nessun percorso\n");
