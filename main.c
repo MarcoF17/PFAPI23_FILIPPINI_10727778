@@ -29,7 +29,7 @@ typedef struct StopDuringRoute* StopPointer;
 int scanfTmp = 0, stationNumber = 0;
 SSPointer pointerVector[POINTER_VECTOR_DIM];   //vector to optimize access to stations
 StopPointer finalStopPointer = NULL, initialStopPointer = NULL;
-int *resultVector = NULL, resultVectorDimension = 0;
+int *resultVector = NULL, resultVectorDimension = 0, fixed = 0;
 
 ///initialize pointer-vector to NULL
 void init_pointer_vector(SSPointer pv[]){
@@ -408,6 +408,7 @@ void route_fixup(SSPointer prevPrevStop, SSPointer prevStop, SSPointer newStop) 
     SSPointer minReachableStationFromPrevPrev = calculate_minReachableStation(prevPrevStop, -1);
     if (minReachableStationFromPrevPrev == prevStop) {
         //all ok
+        fixed = 0;
         return;
     }
     else {
@@ -418,6 +419,7 @@ void route_fixup(SSPointer prevPrevStop, SSPointer prevStop, SSPointer newStop) 
                     if(prevPrevStop->carList != NULL){
                         if(prevPrevStop->distance - prevPrevStop->carList->battery <= currentIterationPoint->distance){
                             resultVector[resultVectorDimension - 2] = currentIterationPoint->distance;
+                            fixed = 1;
                         }
                     }
                 }
@@ -541,9 +543,27 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
                 break;
             }
 
-            if(prevPrevIterationStation != NULL)
-                route_fixup(prevPrevIterationStation, prevIterationStation, possibleNextStopStation);
+            if(resultVectorDimension == 3){
+                route_fixup(startingStation, prevIterationStation, possibleNextStopStation);
+            }
 
+            if(prevPrevIterationStation != NULL){
+                route_fixup(prevPrevIterationStation, prevIterationStation, possibleNextStopStation);
+                if(resultVectorDimension >= 4 && fixed){
+                    SSPointer s1, s2, s3;
+                    s1 = search_for_station(resultVector[resultVectorDimension-3]);
+                            //prevPrevPrevIterationStation;
+                    s2 = prevPrevIterationStation;
+                            //search_for_station(resultVector[resultVectorDimension-3]);
+                    s3 = prevIterationStation;
+                            //search_for_station(resultVector[resultVectorDimension-2]);
+                    if(s1 != NULL && s2 != NULL && s3 != NULL)
+                        route_fixup(s1, s2, s3);
+                    fixed = 0;
+                }
+            }
+
+            //prevPrevPrevIterationStation = prevPrevIterationStation;
             prevPrevIterationStation = prevIterationStation;
             prevIterationStation = possibleNextStopStation;
 
