@@ -29,7 +29,7 @@ typedef struct StopDuringRoute* StopPointer;
 int scanfTmp = 0, stationNumber = 0;
 SSPointer pointerVector[POINTER_VECTOR_DIM];   //vector to optimize access to stations
 StopPointer finalStopPointer = NULL, initialStopPointer = NULL;
-int *resultVector = NULL, resultVectorDimension = 0, fixed = 0;
+int *resultVector = NULL, resultVectorDimension = 0;
 
 ///initialize pointer-vector to NULL
 void init_pointer_vector(SSPointer pv[]){
@@ -408,7 +408,6 @@ void route_fixup(SSPointer prevPrevStop, SSPointer prevStop, SSPointer newStop) 
     SSPointer minReachableStationFromPrevPrev = calculate_minReachableStation(prevPrevStop, -1);
     if (minReachableStationFromPrevPrev == prevStop) {
         //all ok
-        fixed = 0;
         return;
     }
     else {
@@ -419,7 +418,6 @@ void route_fixup(SSPointer prevPrevStop, SSPointer prevStop, SSPointer newStop) 
                     if(prevPrevStop->carList != NULL){
                         if(prevPrevStop->distance - prevPrevStop->carList->battery <= currentIterationPoint->distance){
                             resultVector[resultVectorDimension - 2] = currentIterationPoint->distance;
-                            fixed = 1;
                         }
                     }
                 }
@@ -435,9 +433,54 @@ void route_fixup(SSPointer prevPrevStop, SSPointer prevStop, SSPointer newStop) 
     }
 }
 
+void new_route_fixup(int finish){
+    SSPointer oneOfThreeStation, twoOfThreeStation, threeOfThreeStation;
+    if(resultVectorDimension >= 2) {
+        oneOfThreeStation = search_for_station(resultVector[resultVectorDimension - 2]);
+        twoOfThreeStation = search_for_station(resultVector[resultVectorDimension - 1]);
+        threeOfThreeStation = search_for_station(finish);
+
+        SSPointer currentIterationStation = twoOfThreeStation->prevStation;
+        SSPointer minReachableStationFromOneOfThreeStation = calculate_minReachableStation(oneOfThreeStation, finish);
+        SSPointer selectedStation = NULL;
+        int i = 0;
+        while(1){
+            currentIterationStation = twoOfThreeStation->prevStation;
+            selectedStation = NULL;
+            while(1){
+                if(currentIterationStation == threeOfThreeStation)
+                    break;
+                if(currentIterationStation->distance < minReachableStationFromOneOfThreeStation->distance)
+                    break;
+
+                if(currentIterationStation->carList != NULL)
+                    if(currentIterationStation->distance - currentIterationStation->carList->battery <= threeOfThreeStation->distance)
+                        selectedStation = currentIterationStation;
+
+                currentIterationStation = currentIterationStation->prevStation;
+            }
+
+            if(selectedStation != NULL)
+                if(selectedStation != threeOfThreeStation){
+                    resultVector[resultVectorDimension-1-i] = selectedStation->distance;
+                    twoOfThreeStation = selectedStation;
+
+                }
+
+            threeOfThreeStation = twoOfThreeStation;
+            twoOfThreeStation = oneOfThreeStation;
+            if(twoOfThreeStation->distance == resultVector[0])
+                break;
+            if(resultVectorDimension-2-++i < 0)
+                break;
+            oneOfThreeStation = search_for_station(resultVector[resultVectorDimension - 2 - i]);
+            minReachableStationFromOneOfThreeStation = calculate_minReachableStation(oneOfThreeStation, finish);
+        }
+    }
+}
+
 ///plans a route (if it exists) between start and finish stations (start > finish)
-void plan_route_backwards(int start, int finish){    //0 means no route found, 1 means route found
-    //ci vuole un ciclo che contenga tutto probabilmente
+void plan_route_backwards(int start, int finish){
     const SSPointer startingStation = search_for_station(start);  //startingStation in the station at distance == start
 
     if(startingStation->carList == NULL)
@@ -461,10 +504,10 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
 
         //iteration on station between startingStation and minReachableStationFromStartingStation to select nextStopStation
         SSPointer currentIterationStation = startingStation->prevStation, possibleNextStopStation = minReachableStationFromStartingStation, nextMinReachableStation = NULL;
-        SSPointer prevIterationStation = NULL, prevPrevIterationStation = NULL;
+        //SSPointer prevIterationStation = NULL, prevPrevIterationStation = NULL;
         int check;
         int done = 0;
-        //assert currentIterrationStation != NULL
+        //assert currentIterationStation != NULL
         while(1){
             check = 0;
             SSPointer minReachableStationFromMinReachableStation = calculate_minReachableStation(minReachableStationFromStartingStation, finish);
@@ -525,8 +568,8 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
             //printf("----------------------------------------\n");
 
             if(check == 2){
-                print_result_vector(finish);
-                return;
+                //print_result_vector(finish);
+                break;
             }
 
             //possibleNextStopStation is the nextStop
@@ -539,41 +582,7 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
             //printf("added: %d\n", possibleNextStopStation->distance);
 
             if(possibleNextStopStation->distance <= finish){
-                print_result_vector(finish);
                 break;
-            }
-
-            if(resultVectorDimension == 3){
-                route_fixup(startingStation, prevIterationStation, possibleNextStopStation);
-            }
-
-            if(prevPrevIterationStation != NULL){
-                prevPrevIterationStation = search_for_station(resultVector[resultVectorDimension - 3]);
-                prevIterationStation = search_for_station(resultVector[resultVectorDimension - 2]);
-                route_fixup(prevPrevIterationStation, prevIterationStation, possibleNextStopStation);
-                /*if(resultVectorDimension >= 4 && fixed){
-                    SSPointer s1, s2, s3;
-                    s1 = search_for_station(resultVector[resultVectorDimension-3]);
-                            //prevPrevPrevIterationStation;
-                    s2 = prevPrevIterationStation;
-                            //search_for_station(resultVector[resultVectorDimension-3]);
-                    s3 = prevIterationStation;
-                            //search_for_station(resultVector[resultVectorDimension-2]);
-                    if(s1 != NULL && s2 != NULL && s3 != NULL)
-                        route_fixup(s1, s2, s3);
-                    fixed = 0;
-                }*/
-            }
-
-            if(resultVectorDimension >= 3){
-                //search_for_station(resultVector[resultVectorDimension - 4]);
-                prevPrevIterationStation = search_for_station(resultVector[resultVectorDimension-3]);
-                prevIterationStation = search_for_station(resultVector[resultVectorDimension-2]);
-            }
-
-            else{
-                prevPrevIterationStation = prevIterationStation;
-                prevIterationStation = possibleNextStopStation;
             }
 
             minReachableStationFromStartingStation = calculate_minReachableStation(possibleNextStopStation, finish);
@@ -583,6 +592,11 @@ void plan_route_backwards(int start, int finish){    //0 means no route found, 1
             }
             nextMinReachableStation = NULL;
         }
+
+        if(resultVectorDimension >= 2){
+            new_route_fixup(finish);
+        }
+        print_result_vector(finish);
     }
 }
 
