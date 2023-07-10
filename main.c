@@ -403,36 +403,6 @@ void print_result_vector(int finish){
 }
 
 ///if the previous stop chosen is not the minimum one based on next stop
-void route_fixup(SSPointer prevPrevStop, SSPointer prevStop, SSPointer newStop) {
-    //looking for the minimum previous-stop to reach new-stop (prev-stop needs to be reachable from prevPrev-stop)
-    SSPointer minReachableStationFromPrevPrev = calculate_minReachableStation(prevPrevStop, -1);
-    if (minReachableStationFromPrevPrev == prevStop) {
-        //all ok
-        return;
-    }
-    else {
-        SSPointer startingPoint = prevStop->prevStation, currentIterationPoint = startingPoint;
-        while (1) {
-            if (currentIterationPoint->carList != NULL) {
-                if (currentIterationPoint->distance - currentIterationPoint->carList->battery <= newStop->distance) {
-                    if(prevPrevStop->carList != NULL){
-                        if(prevPrevStop->distance - prevPrevStop->carList->battery <= currentIterationPoint->distance){
-                            resultVector[resultVectorDimension - 2] = currentIterationPoint->distance;
-                        }
-                    }
-                }
-            }
-
-            if (currentIterationPoint == minReachableStationFromPrevPrev)
-                return;
-
-            currentIterationPoint = currentIterationPoint->prevStation;
-            if (currentIterationPoint->prevStation == NULL)
-                return;
-        }
-    }
-}
-
 void new_route_fixup(int finish){
     SSPointer oneOfThreeStation, twoOfThreeStation, threeOfThreeStation;
     if(resultVectorDimension >= 2) {
@@ -504,7 +474,6 @@ void plan_route_backwards(int start, int finish){
 
         //iteration on station between startingStation and minReachableStationFromStartingStation to select nextStopStation
         SSPointer currentIterationStation = startingStation->prevStation, possibleNextStopStation = minReachableStationFromStartingStation, nextMinReachableStation = NULL;
-        //SSPointer prevIterationStation = NULL, prevPrevIterationStation = NULL;
         int check;
         int done = 0;
         //assert currentIterationStation != NULL
@@ -519,8 +488,6 @@ void plan_route_backwards(int start, int finish){
                     continue;
                 }
 
-                //printf("current: %d; minReachableFromCurrent: %d\n", currentIterationStation->distance, nextMinReachableStation->distance);
-
                 currentIterationStation = currentIterationStation->prevStation;
 
                 if(nextMinReachableStation->distance <= finish){
@@ -531,14 +498,12 @@ void plan_route_backwards(int start, int finish){
                             resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
                             resultVector[resultVectorDimension] = possibleNextStopStation->distance;
                             resultVectorDimension++;
-                            //printf("in the if: %d\n", possibleNextStopStation->distance);
                             done = 1;
                         }
                     }
                     else{
                         if(resultVector[resultVectorDimension-1] != possibleNextStopStation->distance)
                             resultVector[resultVectorDimension-1] = possibleNextStopStation->distance;
-                        //printf("changed: %d\n", possibleNextStopStation->distance);
                     }
 
                 }
@@ -561,14 +526,11 @@ void plan_route_backwards(int start, int finish){
 
             if(check == 0){
                 printf("nessun percorso\n");
-                //free(resultVector);
                 return;
             }
 
-            //printf("----------------------------------------\n");
 
             if(check == 2){
-                //print_result_vector(finish);
                 break;
             }
 
@@ -578,8 +540,6 @@ void plan_route_backwards(int start, int finish){
                 resultVector[resultVectorDimension] = possibleNextStopStation->distance;
                 resultVectorDimension++;
             }
-
-            //printf("added: %d\n", possibleNextStopStation->distance);
 
             if(possibleNextStopStation->distance <= finish){
                 break;

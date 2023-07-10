@@ -1,6 +1,3 @@
 # PFAPI23_FILIPPINI_10727778
 
-Last problems:
-- test 106
-- test 108
-- test 110
+21/30 -> 14,4s & 36,0 MiB
