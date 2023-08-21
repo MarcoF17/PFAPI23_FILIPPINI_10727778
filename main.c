@@ -9,15 +9,6 @@ typedef struct Car{
     struct Car* nextCar;
 }Car;
 
-typedef struct ServiceStation{
-    int distance;
-    struct Car* carList;
-    struct ServiceStation* nextStation;
-    struct ServiceStation* prevStation;
-}ServiceStation;
-
-typedef struct ServiceStation* SSPointer;
-
 typedef struct StopDuringRoute{
     int distance;
     struct StopDuringRoute* prevStop;
@@ -26,75 +17,158 @@ typedef struct StopDuringRoute{
 
 typedef struct StopDuringRoute* StopPointer;
 
+typedef struct StationNode{
+    int distance;
+    struct Car* carList;
+    struct StationNode* leftChild;
+    struct StationNode* rightChild;
+    struct StationNode* parent;
+}StationNode;
+
+typedef struct StationNode* NodePointer;
+
 int scanfTmp = 0, stationNumber = 0;
-SSPointer pointerVector[POINTER_VECTOR_DIM];   //vector to optimize access to stations
 StopPointer finalStopPointer = NULL, initialStopPointer = NULL;
 int *resultVector = NULL, resultVectorDimension = 0;
 
-///initialize pointer-vector to NULL
-void init_pointer_vector(SSPointer pv[]){
-    int i;
-    for(i = 0; i < POINTER_VECTOR_DIM; i++)
-        pointerVector[i] = NULL;
-}
+NodePointer root = NULL;
 
-///in-order insertion of a new station
-void station_inorder_insert(SSPointer newStation){
-    if(pointerVector[0] == NULL && pointerVector[POINTER_VECTOR_DIM-1] == NULL){
-        pointerVector[0] = pointerVector[POINTER_VECTOR_DIM-1] = newStation;
-        newStation->nextStation = newStation->prevStation = NULL;
-        return;
+NodePointer tree_minimum(NodePointer node){
+    NodePointer res = node;
+    while(res -> leftChild != NULL){
+        res = res ->leftChild;
     }
 
-    SSPointer currentStation = pointerVector[0];
-    while(newStation->distance > currentStation->distance){
-        if(newStation->distance == currentStation->distance){
-            printf("non aggiunta\n");
-            free(newStation);
-            return;
+    return res;
+}
+
+NodePointer tree_maximum(NodePointer node){
+    NodePointer res = node;
+    while(res -> rightChild != NULL){
+        res = res -> rightChild;
+    }
+
+    return res;
+}
+
+NodePointer tree_successor(NodePointer node){
+    NodePointer res = node;
+
+    if(node -> rightChild != NULL)
+        return tree_minimum(node -> rightChild);
+
+    else {
+        res = node -> parent;
+        while(res != NULL && node == res -> rightChild){
+            node = res;
+            res = res -> parent;
         }
-        currentStation = currentStation->nextStation;
-        if(currentStation == NULL)
-            break;
-    }
 
-    if(currentStation != NULL){
-        newStation->nextStation = currentStation;
-        newStation->prevStation = currentStation->prevStation;
-
-        if(newStation->nextStation == NULL)
-            pointerVector[POINTER_VECTOR_DIM-1] = newStation;
-        else
-            newStation->nextStation->prevStation = newStation;
-
-        if(newStation->prevStation == NULL)
-            pointerVector[0] = newStation;
-        else
-            newStation->prevStation->nextStation = newStation;
-    }
-    else{
-        newStation->prevStation = pointerVector[POINTER_VECTOR_DIM-1];
-        newStation->nextStation = NULL;
-        newStation->prevStation->nextStation = newStation;
-        pointerVector[POINTER_VECTOR_DIM-1] = newStation;
+        return res;
     }
 }
 
-///returns the reference to the station with the given distance
-SSPointer search_for_station(int distance){
-    SSPointer currentStation = pointerVector[0];
+NodePointer tree_predecessor(NodePointer node){
+    NodePointer res = node;
 
-    while(currentStation != NULL){
-        if(currentStation->distance == distance)
-            return currentStation;
-        currentStation = currentStation->nextStation;
+    if(node -> leftChild != NULL)
+        return tree_maximum(node -> leftChild);
+
+    else {
+        res = node -> parent;
+        while(res != NULL && node == res -> leftChild){
+            node = res;
+            res = res -> parent;
+        }
+
+        return res;
+    }
+}
+
+/*NodePointer tree_search(int distanceToFind){
+    NodePointer res = root;
+    while(res != NULL){
+        if(res -> distance == distanceToFind)
+            return res;
+        else if(res -> distance < distanceToFind)
+            res = res ->leftChild;
+        else
+            res = res -> rightChild;
     }
 
     return NULL;
+}*/
+
+NodePointer tree_search(int distanceToFind){
+    NodePointer res = root;
+    while(res != NULL && res -> distance != distanceToFind){
+        if(distanceToFind < res ->distance)
+            res = res -> leftChild;
+        else
+            res = res -> rightChild;
+    }
+
+    return res;
+}
+
+void station_tree_insert(NodePointer newStation){
+    NodePointer insertionPoint = root, tmpPointer = NULL;
+    while(insertionPoint != NULL){
+        tmpPointer = insertionPoint;
+        if(newStation -> distance < insertionPoint -> distance)
+            insertionPoint = insertionPoint -> leftChild;
+        else
+            insertionPoint = insertionPoint -> rightChild;
+    }
+
+    newStation -> parent = tmpPointer;
+    if(newStation -> parent == NULL)
+        root = newStation;
+    else if(newStation -> distance < tmpPointer -> distance)
+        tmpPointer -> leftChild = newStation;
+    else
+        tmpPointer -> rightChild = newStation;
+}
+
+void tree_delete(int distanceToDelete){
+    NodePointer nodeToDelete = tree_search(distanceToDelete);
+    if(nodeToDelete == NULL){
+        printf("non demolita\n");
+        return;
+    }
+
+    else{
+        NodePointer nodeToBeDeleted = NULL, tmpPointer = NULL;
+        if(nodeToDelete -> leftChild == NULL || nodeToDelete -> rightChild == NULL)
+            nodeToBeDeleted = nodeToDelete;
+        else
+            nodeToBeDeleted = tree_successor(nodeToDelete);
+
+        if(nodeToBeDeleted -> leftChild != NULL)
+            tmpPointer = nodeToBeDeleted -> leftChild;
+        else
+            tmpPointer = nodeToBeDeleted -> rightChild;
+
+        if(tmpPointer != NULL)
+            tmpPointer -> parent = nodeToBeDeleted -> parent;
+        if(nodeToBeDeleted -> parent == NULL)
+            root = tmpPointer;
+        else if(nodeToBeDeleted == nodeToBeDeleted -> parent -> leftChild)
+            nodeToBeDeleted -> parent -> leftChild = tmpPointer;
+        else nodeToBeDeleted -> parent -> rightChild = tmpPointer;
+
+        if(nodeToBeDeleted != nodeToDelete){
+            nodeToDelete -> distance = nodeToBeDeleted -> distance;
+            nodeToDelete -> carList = nodeToBeDeleted -> carList;
+        }
+
+        free(nodeToBeDeleted);
+        printf("demolita\n");
+    }
 }
 
 ///in-order insertion of a new car in a station
-int car_create_inorder_insert(SSPointer station, int battery) {
+int car_create_inorder_insert(NodePointer station, int battery) {
     if(station == NULL)
         return 0;       //0 stands for "non aggiunta"
 
@@ -125,18 +199,18 @@ int car_create_inorder_insert(SSPointer station, int battery) {
     return 1;       //1 stands for "aggiunta"
 }
 
-///memory allocation for a new station and possibly new cars
 void create_station(int distance, int carsNumber){
-    if(search_for_station(distance) != NULL){
+    if(tree_search(distance) != NULL){
         printf("non aggiunta\n");
         return;
     }
 
-    SSPointer tmp;
-    tmp = malloc(sizeof(ServiceStation));
+    NodePointer tmp;
+    tmp = malloc(sizeof(StationNode));
     tmp->distance = distance;
     tmp->carList = NULL;
-    station_inorder_insert(tmp);
+    tmp->leftChild = tmp->rightChild = tmp->parent = NULL;
+    station_tree_insert(tmp);
 
     if(carsNumber > 0){
         //adding cars list to newStation
@@ -148,44 +222,11 @@ void create_station(int distance, int carsNumber){
     }
 
     printf("aggiunta\n");
-    stationNumber++;
-}
-
-///deletes a station which is at the given distance (if it exists)
-void demolish_station(int distance){
-    SSPointer pointer = search_for_station(distance);
-    if(pointer == NULL){
-        printf("non demolita\n");
-        return;
-    }
-
-    if(pointer->prevStation != NULL)
-        pointer->prevStation->nextStation = pointer->nextStation;
-    else
-        pointerVector[0] = pointer->nextStation;
-
-    if(pointer->nextStation != NULL)
-        pointer->nextStation->prevStation = pointer->prevStation;
-    else
-        pointerVector[POINTER_VECTOR_DIM - 1] = pointer->prevStation;
-
-    Car *currentCar = pointer->carList, *nextCar;
-    while(currentCar != NULL){
-        nextCar = currentCar->nextCar;
-        free(currentCar);
-        currentCar = nextCar;
-    }
-
-    printf("demolita\n");
-    stationNumber--;
-    if(stationNumber == 0){
-        pointerVector[0] = pointerVector[POINTER_VECTOR_DIM-1] = NULL;
-    }
 }
 
 ///scraps the car with the given battery capacity at the given station (if it exists)
 void scrap_car(int distance, int battery){
-    SSPointer pointer = search_for_station(distance);
+    NodePointer pointer = tree_search(distance);
     if(pointer == NULL){
         printf("non rottamata\n");
         return;
@@ -261,7 +302,7 @@ char *convert_int_to_char(int toBeConverted){
 }
 
 ///insertion of stop in a separate list
-void stop_insert(SSPointer station){
+void stop_insert(NodePointer station){
     StopDuringRoute *newStop = malloc(sizeof(StopDuringRoute));
     newStop->distance = station->distance;
 
@@ -306,7 +347,7 @@ void stopList_cleanup(){
 
 ///plans a route (if it exists) between start and finish stations (start < finish)
 void plan_route_forwards(int start, int finish){
-    const SSPointer startingStation = search_for_station(start);
+    const NodePointer startingStation = tree_search(start);
 
     //if there are no cars at the station
     if(startingStation->carList == NULL){
@@ -321,8 +362,8 @@ void plan_route_forwards(int start, int finish){
     }
 
     //at least one stop is required
-    const SSPointer arrivingStation = search_for_station(finish);
-    SSPointer currentArrivingStation = arrivingStation, selectedStationForNextIteration = arrivingStation->prevStation, currentStationDuringIteration = arrivingStation->prevStation;
+    const NodePointer arrivingStation = tree_search(finish);
+    NodePointer currentArrivingStation = arrivingStation, selectedStationForNextIteration = tree_predecessor(arrivingStation), currentStationDuringIteration = tree_predecessor(arrivingStation);
     int done = 0, check = 0;
     while(1){
         check = 0;
@@ -340,13 +381,13 @@ void plan_route_forwards(int start, int finish){
                 break;
 
 
-            currentStationDuringIteration = currentStationDuringIteration->prevStation;
+            currentStationDuringIteration = tree_predecessor(currentStationDuringIteration);
             if(currentStationDuringIteration == NULL)
                 break;
         }
 
         currentArrivingStation = selectedStationForNextIteration;
-        currentStationDuringIteration = selectedStationForNextIteration->prevStation;
+        currentStationDuringIteration = tree_predecessor(selectedStationForNextIteration);
         if(selectedStationForNextIteration->distance < startingStation->distance){
             break;
         }
@@ -370,27 +411,27 @@ void plan_route_forwards(int start, int finish){
 }
 
 ///calculates minReachableStation from the given startingStation
-SSPointer calculate_minReachableStation(SSPointer startingStation, int finish){ //needs to be fixed
+NodePointer calculate_minReachableStation(NodePointer startingStation, int finish){ //needs to be fixed
     if(startingStation->carList == NULL)
         return startingStation;
 
     int minReachableDistanceFromStartingStation = startingStation->distance - startingStation->carList->battery;
     //looking for minReachableStation
-    SSPointer minReachableStation = startingStation;
+    NodePointer minReachableStation = startingStation;
     while(1){
         if(minReachableStation->distance >= minReachableDistanceFromStartingStation){
-            if(minReachableStation == pointerVector[0])
-                return pointerVector[0];
-            if(minReachableStation->prevStation != NULL)
-                minReachableStation = minReachableStation->prevStation;
+            if(minReachableStation == tree_minimum(root))
+                return tree_minimum(root);
+            if(tree_predecessor(minReachableStation) != NULL)
+                minReachableStation = tree_predecessor(minReachableStation);
             else if(minReachableStation->distance == finish)
-                return minReachableStation->nextStation;
+                return tree_successor(minReachableStation);
             //else return minReachableStation;
         }
         else break;
     }
 
-    return minReachableStation->nextStation;
+    return tree_successor(minReachableStation);
 }
 
 ///prints backwards-planned route
@@ -404,18 +445,18 @@ void print_result_vector(int finish){
 
 ///if the previous stop chosen is not the minimum one based on next stop
 void new_route_fixup(int finish){
-    SSPointer oneOfThreeStation, twoOfThreeStation, threeOfThreeStation;
+    NodePointer oneOfThreeStation, twoOfThreeStation, threeOfThreeStation;
     if(resultVectorDimension >= 2) {
-        oneOfThreeStation = search_for_station(resultVector[resultVectorDimension - 2]);
-        twoOfThreeStation = search_for_station(resultVector[resultVectorDimension - 1]);
-        threeOfThreeStation = search_for_station(finish);
+        oneOfThreeStation = tree_search(resultVector[resultVectorDimension - 2]);
+        twoOfThreeStation = tree_search(resultVector[resultVectorDimension - 1]);
+        threeOfThreeStation = tree_search(finish);
 
-        SSPointer currentIterationStation = twoOfThreeStation->prevStation;
-        SSPointer minReachableStationFromOneOfThreeStation = calculate_minReachableStation(oneOfThreeStation, finish);
-        SSPointer selectedStation = NULL;
+        NodePointer currentIterationStation = tree_predecessor(twoOfThreeStation);
+        NodePointer minReachableStationFromOneOfThreeStation = calculate_minReachableStation(oneOfThreeStation, finish);
+        NodePointer selectedStation = NULL;
         int i = 0;
         while(1){
-            currentIterationStation = twoOfThreeStation->prevStation;
+            currentIterationStation = tree_predecessor(twoOfThreeStation);
             selectedStation = NULL;
             while(1){
                 if(currentIterationStation == threeOfThreeStation)
@@ -427,7 +468,7 @@ void new_route_fixup(int finish){
                     if(currentIterationStation->distance - currentIterationStation->carList->battery <= threeOfThreeStation->distance)
                         selectedStation = currentIterationStation;
 
-                currentIterationStation = currentIterationStation->prevStation;
+                currentIterationStation = tree_predecessor(currentIterationStation);
             }
 
             if(selectedStation != NULL)
@@ -443,7 +484,7 @@ void new_route_fixup(int finish){
                 break;
             if(resultVectorDimension-2-++i < 0)
                 break;
-            oneOfThreeStation = search_for_station(resultVector[resultVectorDimension - 2 - i]);
+            oneOfThreeStation = tree_search(resultVector[resultVectorDimension - 2 - i]);
             minReachableStationFromOneOfThreeStation = calculate_minReachableStation(oneOfThreeStation, finish);
         }
     }
@@ -451,13 +492,13 @@ void new_route_fixup(int finish){
 
 ///plans a route (if it exists) between start and finish stations (start > finish)
 void plan_route_backwards(int start, int finish){
-    const SSPointer startingStation = search_for_station(start);  //startingStation in the station at distance == start
+    const NodePointer startingStation = tree_search(start);  //startingStation in the station at distance == start
 
     if(startingStation->carList == NULL)
         printf("nessun percorso\n");
     else{
         //looking for minReachableStationFromStartingStation
-        SSPointer minReachableStationFromStartingStation = calculate_minReachableStation(startingStation, finish);
+        NodePointer minReachableStationFromStartingStation = calculate_minReachableStation(startingStation, finish);
         if(minReachableStationFromStartingStation == NULL){
             printf("error\n");
             return;
@@ -473,26 +514,26 @@ void plan_route_backwards(int start, int finish){
         resultVectorDimension++;
 
         //iteration on station between startingStation and minReachableStationFromStartingStation to select nextStopStation
-        SSPointer currentIterationStation = startingStation->prevStation, possibleNextStopStation = minReachableStationFromStartingStation, nextMinReachableStation = NULL;
+        NodePointer currentIterationStation = tree_predecessor(startingStation), possibleNextStopStation = minReachableStationFromStartingStation, nextMinReachableStation = NULL;
         int check;
         int done = 0;
         //assert currentIterationStation != NULL
         while(1){
             check = 0;
-            SSPointer minReachableStationFromMinReachableStation = calculate_minReachableStation(minReachableStationFromStartingStation, finish);
+            NodePointer minReachableStationFromMinReachableStation = calculate_minReachableStation(minReachableStationFromStartingStation, finish);
 
             while(currentIterationStation->distance >= minReachableStationFromStartingStation->distance){
                 nextMinReachableStation = calculate_minReachableStation(currentIterationStation, finish);
                 if(nextMinReachableStation == currentIterationStation){
-                    currentIterationStation = currentIterationStation->prevStation;
+                    currentIterationStation = tree_predecessor(currentIterationStation);
                     continue;
                 }
 
-                currentIterationStation = currentIterationStation->prevStation;
+                currentIterationStation = tree_predecessor(currentIterationStation);
 
                 if(nextMinReachableStation->distance <= finish){
                     check = 2;
-                    possibleNextStopStation = currentIterationStation->nextStation;
+                    possibleNextStopStation = tree_successor(currentIterationStation);
                     if(done == 0){
                         if(resultVector[resultVectorDimension-1] != possibleNextStopStation->distance){
                             resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
@@ -512,7 +553,7 @@ void plan_route_backwards(int start, int finish){
                     break;
                 }
                 else if(nextMinReachableStation->distance <= minReachableStationFromMinReachableStation->distance && check != 2/* || nextMinReachableStation->distance <= finish*/){
-                    possibleNextStopStation = currentIterationStation->nextStation;
+                    possibleNextStopStation = tree_successor(currentIterationStation);
                     minReachableStationFromMinReachableStation = nextMinReachableStation;
                     check = 1;
                 }
@@ -560,14 +601,6 @@ void plan_route_backwards(int start, int finish){
     }
 }
 
-///just for debug
-void print_cars_batteries(SSPointer station){
-    Car *currentCar = station->carList;
-    while(currentCar != NULL){
-        printf("%d\n", currentCar->battery);
-        currentCar = currentCar->nextCar;
-    }
-}
 
 int main() {
     while(1){
@@ -587,7 +620,7 @@ int main() {
                     scanfTmp = scanf("%c", &commandType);
                 int distance, battery;
                 scanfTmp = scanf("%d %d", &distance, &battery);
-                int res = car_create_inorder_insert(search_for_station(distance), battery);
+                int res = car_create_inorder_insert(tree_search(distance), battery);
                 if(res == 0)
                     printf("non aggiunta\n");
                 else
@@ -609,7 +642,7 @@ int main() {
                 scanfTmp = scanf("%c", &commandType);
             int distance;
             scanfTmp = scanf("%d", &distance);
-            demolish_station(distance);
+            tree_delete(distance);
         }
 
         else if(commandType == 'r'){    //rottama-auto
