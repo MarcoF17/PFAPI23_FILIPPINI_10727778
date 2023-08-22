@@ -33,6 +33,7 @@ int *resultVector = NULL, resultVectorDimension = 0;
 
 NodePointer root = NULL;
 
+///returnes the node with the minimum key of a tree given by its root
 NodePointer tree_minimum(NodePointer node){
     NodePointer res = node;
     while(res -> leftChild != NULL){
@@ -42,6 +43,7 @@ NodePointer tree_minimum(NodePointer node){
     return res;
 }
 
+///returnes the node with the maximum key of a tree given by its root
 NodePointer tree_maximum(NodePointer node){
     NodePointer res = node;
     while(res -> rightChild != NULL){
@@ -51,6 +53,7 @@ NodePointer tree_maximum(NodePointer node){
     return res;
 }
 
+///return the following node of a given node
 NodePointer tree_successor(NodePointer node){
     NodePointer res = node;
 
@@ -68,6 +71,7 @@ NodePointer tree_successor(NodePointer node){
     }
 }
 
+///return the previous node of a given node
 NodePointer tree_predecessor(NodePointer node){
     NodePointer res = node;
 
@@ -85,20 +89,7 @@ NodePointer tree_predecessor(NodePointer node){
     }
 }
 
-/*NodePointer tree_search(int distanceToFind){
-    NodePointer res = root;
-    while(res != NULL){
-        if(res -> distance == distanceToFind)
-            return res;
-        else if(res -> distance < distanceToFind)
-            res = res ->leftChild;
-        else
-            res = res -> rightChild;
-    }
-
-    return NULL;
-}*/
-
+///return the node with the given key if it exists, returns NULL otherwise
 NodePointer tree_search(int distanceToFind){
     NodePointer res = root;
     while(res != NULL && res -> distance != distanceToFind){
@@ -111,6 +102,7 @@ NodePointer tree_search(int distanceToFind){
     return res;
 }
 
+///method that put a new node in the right place in the tree
 void station_tree_insert(NodePointer newStation){
     NodePointer insertionPoint = root, tmpPointer = NULL;
     while(insertionPoint != NULL){
@@ -130,6 +122,7 @@ void station_tree_insert(NodePointer newStation){
         tmpPointer -> rightChild = newStation;
 }
 
+///methods thah remove from the tree the node with the given key (if it exists)
 void tree_delete(int distanceToDelete){
     NodePointer nodeToDelete = tree_search(distanceToDelete);
     if(nodeToDelete == NULL){
@@ -199,6 +192,7 @@ int car_create_inorder_insert(NodePointer station, int battery) {
     return 1;       //1 stands for "aggiunta"
 }
 
+///memory allocation for a new station
 void create_station(int distance, int carsNumber){
     if(tree_search(distance) != NULL){
         printf("non aggiunta\n");
