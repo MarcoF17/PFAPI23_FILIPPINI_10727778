@@ -2,23 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define POINTER_VECTOR_DIM 2
-
 typedef struct Car{
-    int battery;
+    int battery;        // Maximum distance a car can travel
     struct Car* nextCar;
 }Car;
 
-typedef struct StopDuringRoute{
-    int distance;
-    struct StopDuringRoute* prevStop;
-    struct StopDuringRoute* nextStop;
-}StopDuringRoute;
-
-typedef struct StopDuringRoute* StopPointer;
-
 typedef struct StationNode{
-    int distance;
+    int distance;          // Absolute distance from the beginning of the road
     struct Car* carList;
     struct StationNode* leftChild;
     struct StationNode* rightChild;
@@ -27,13 +17,11 @@ typedef struct StationNode{
 
 typedef struct StationNode* NodePointer;
 
-int scanfTmp = 0, stationNumber = 0;
-StopPointer finalStopPointer = NULL, initialStopPointer = NULL;
+int scanfTmp = 0;           // Used to collect the return value of each scanf invocation
 int *resultVector = NULL, resultVectorDimension = 0;
-
 NodePointer root = NULL;
 
-///returnes the node with the minimum key of a tree given by its root
+///returns the node with the minimum key of a tree given by its root
 NodePointer tree_minimum(NodePointer node){
     NodePointer res = node;
     while(res -> leftChild != NULL){
@@ -43,7 +31,7 @@ NodePointer tree_minimum(NodePointer node){
     return res;
 }
 
-///returnes the node with the maximum key of a tree given by its root
+///returns the node with the maximum key of a tree given by its root
 NodePointer tree_maximum(NodePointer node){
     NodePointer res = node;
     while(res -> rightChild != NULL){
@@ -122,7 +110,7 @@ void station_tree_insert(NodePointer newStation){
         tmpPointer -> rightChild = newStation;
 }
 
-///methods thah remove from the tree the node with the given key (if it exists)
+///method that remove from the tree the node with the given key (if it exists)
 void tree_delete(int distanceToDelete){
     NodePointer nodeToDelete = tree_search(distanceToDelete);
     if(nodeToDelete == NULL){
@@ -160,7 +148,7 @@ void tree_delete(int distanceToDelete){
     }
 }
 
-///in-order insertion of a new car in a station
+///creation and in-order insertion of a new car in a station
 int car_create_inorder_insert(NodePointer station, int battery) {
     if(station == NULL)
         return 0;       //0 stands for "non aggiunta"
@@ -245,98 +233,24 @@ void scrap_car(int distance, int battery){
     printf("non rottamata\n");
 }
 
-char *convert_int_to_char(int toBeConverted){
-    char *res = malloc(10);
-    int counter = 0;
-    while(toBeConverted > 0){
-        counter++;
-        int remainder = toBeConverted % 10;
-        toBeConverted /= 10;
-        switch (remainder) {
-            case 0:
-                strcat(res, "0");
-                break;
-            case 1:
-                strcat(res, "1");
-                break;
-            case 2:
-                strcat(res, "2");
-                break;
-            case 3:
-                strcat(res, "3");
-                break;
-            case 4:
-                strcat(res, "4");
-                break;
-            case 5:
-                strcat(res, "5");
-                break;
-            case 6:
-                strcat(res, "6");
-                break;
-            case 7:
-                strcat(res, "7");
-                break;
-            case 8:
-                strcat(res, "8");
-                break;
-            case 9:
-                strcat(res, "9");
-                break;
-        }
-    }
-
-    char *finalResult = (char*) malloc(counter+1);
+///prints backwards-planned route (finish is the last station to print, backwards is the sense to print
+void print_result_vector(int finish, int backwards){
     int i;
-    for(i = 0; i < counter; i++){
-        finalResult[i] = res[counter - i -1];
+
+    if(!backwards){
+        for(i = 0; i < resultVectorDimension; i++){
+            printf("%d ", resultVector[i]);
+        }
+        printf("%d\n", finish);
     }
+    else {
+        printf("%d ", finish);
 
-    return finalResult;
-}
-
-///insertion of stop in a separate list
-void stop_insert(NodePointer station){
-    StopDuringRoute *newStop = malloc(sizeof(StopDuringRoute));
-    newStop->distance = station->distance;
-
-    if(finalStopPointer == NULL && initialStopPointer == NULL) {
-        finalStopPointer = initialStopPointer = newStop;
-        newStop->prevStop = newStop->nextStop = NULL;
+        for(i = resultVectorDimension - 1; i > 0; i--){
+            printf("%d ", resultVector[i]);
+        }
+        printf("%d\n", resultVector[0]);
     }
-    else{
-        newStop->prevStop = NULL;
-        newStop->nextStop = initialStopPointer;
-        if(initialStopPointer->nextStop != NULL)
-            initialStopPointer->nextStop->prevStop = newStop;
-        initialStopPointer = newStop;
-    }
-}
-
-///prints the route planned
-void print_route(int start, int finish){
-    printf("%d ", start);
-    StopPointer currentIterationStop = initialStopPointer, prevStop = NULL;
-    while(currentIterationStop != NULL){
-        printf("%d ", currentIterationStop->distance);
-        prevStop = currentIterationStop;
-        currentIterationStop = currentIterationStop->nextStop;
-        free(prevStop);
-    }
-    printf("%d\n", finish);
-    initialStopPointer = finalStopPointer = NULL;
-}
-
-///cleans-up the list with stop-stations after route is planned
-void stopList_cleanup(){
-    StopPointer prev, curr = initialStopPointer;
-    while(curr != NULL){
-        prev = curr;
-        curr = curr->nextStop;
-        free(prev);
-    }
-
-    initialStopPointer = finalStopPointer = NULL;
 }
 
 ///plans a route (if it exists) between start and finish stations (start < finish)
@@ -356,6 +270,10 @@ void plan_route_forwards(int start, int finish){
     }
 
     //at least one stop is required
+    resultVector = malloc(sizeof(int));
+    resultVector[resultVectorDimension] = finish;
+    resultVectorDimension++;
+
     const NodePointer arrivingStation = tree_search(finish);
     NodePointer currentArrivingStation = arrivingStation, selectedStationForNextIteration = tree_predecessor(arrivingStation), currentStationDuringIteration = tree_predecessor(arrivingStation);
     int done = 0, check = 0;
@@ -391,17 +309,20 @@ void plan_route_forwards(int start, int finish){
         }
         else if(!check)
             break;
-        else{
-            stop_insert(currentArrivingStation);
+        else if(currentArrivingStation-> distance != start){
+            resultVector = realloc(resultVector, (resultVectorDimension + 1) * sizeof(int));
+            resultVector[resultVectorDimension] = currentArrivingStation->distance;
+            resultVectorDimension++;
         }
     }
 
     if(done == 0){
         printf("nessun percorso\n");
-        stopList_cleanup();
+        //stopList_cleanup();
     }
     else
-        print_route(start, finish);
+        //print_route(start, finish);
+        print_result_vector(start, 1);
 }
 
 ///calculates minReachableStation from the given startingStation
@@ -426,15 +347,6 @@ NodePointer calculate_minReachableStation(NodePointer startingStation, int finis
     }
 
     return tree_successor(minReachableStation);
-}
-
-///prints backwards-planned route
-void print_result_vector(int finish){
-    int i;
-    for(i = 0; i < resultVectorDimension; i++){
-        printf("%d ", resultVector[i]);
-    }
-    printf("%d\n", finish);
 }
 
 ///if the previous stop chosen is not the minimum one based on next stop
@@ -511,7 +423,7 @@ void plan_route_backwards(int start, int finish){
         NodePointer currentIterationStation = tree_predecessor(startingStation), possibleNextStopStation = minReachableStationFromStartingStation, nextMinReachableStation = NULL;
         int check;
         int done = 0;
-        //assert currentIterationStation != NULL
+
         while(1){
             check = 0;
             NodePointer minReachableStationFromMinReachableStation = calculate_minReachableStation(minReachableStationFromStartingStation, finish);
@@ -591,7 +503,7 @@ void plan_route_backwards(int start, int finish){
         if(resultVectorDimension >= 2){
             new_route_fixup(finish);
         }
-        print_result_vector(finish);
+        print_result_vector(finish, 0);
     }
 }
 
@@ -658,13 +570,14 @@ int main() {
 
             if(s1 < s2)
                 plan_route_forwards(s1, s2);
-            else if(s1 > s2){
+            else if(s1 > s2)
                 plan_route_backwards(s1, s2);
-                //print_result_vector(s1);
-                if(resultVector != NULL)
-                    free(resultVector);
-                resultVectorDimension = 0;
+
+            if(resultVector != NULL) {
+                free(resultVector);
+                resultVector = NULL;
             }
+            resultVectorDimension = 0;
         }
     }
 }
